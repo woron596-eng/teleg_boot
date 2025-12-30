@@ -5,11 +5,32 @@ import logging
 import os
 from flask import Flask
 import threading
+import requests
 
 # ==================== КОНФІГУРАЦІЯ ====================
 TOKEN = "8252548275:AAF0qYbEZCoBPEN6gNHx2kkYi9gHoUPNKrA"
 CHANNEL_ID = "@tester_avto"
 
+# АВТОМАТИЧНЕ СКИДАННЯ ВЕБХУКА
+def reset_webhook():
+    """Автоматично скидає вебхук при запуску"""
+    try:
+        url = f"https://api.telegram.org/bot{TOKEN}/deleteWebhook"
+        response = requests.get(url, timeout=5)
+        if response.json().get('ok'):
+            print("✅ Вебхук успішно скинуто!")
+            return True
+        else:
+            print("⚠️ Не вдалося скинути вебхук автоматично")
+            return False
+    except Exception as e:
+        print(f"⚠️ Помилка скидання вебхука: {e}")
+        return False
+
+# Скидаємо вебхук перед створенням бота
+reset_webhook()
+
+# Створюємо бота
 bot = telebot.TeleBot(TOKEN)
 print("=" * 50)
 print("🤖 БОТ ДЛЯ РЕМОНТУ АКУМУЛЯТОРІВ")
@@ -26,9 +47,8 @@ def home():
     return "🤖 Бот працює! Telegram: @tester_avto"
 
 @app.route('/reset')
-def reset():
-    """Сторінка для скидання вебхука"""
-    import requests
+def web_reset():
+    """Сторінка для ручного скидання вебхука"""
     try:
         response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
         return f"✅ Вебхук скинуто: {response.text}"
@@ -46,7 +66,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------- ДАНІ (оновлені ціни) ----------
+# ---------- ДАНІ ----------
 models_structure = {
     "BP‑220 (2 Ah)": {
         "type": "18650",
@@ -161,7 +181,15 @@ def handle_start(message):
         "Ремонт акумуляторів\n\nОберіть бренд:",
         reply_markup=create_main_keyboard()
     )
-    logger.info(f"Старт від {message.from_user.id}")
+
+@bot.message_handler(commands=['resetbot'])
+def handle_reset(message):
+    """Команда для скидання вебхука"""
+    try:
+        response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
+        bot.send_message(message.chat.id, f"✅ Вебхук скинуто: {response.text}")
+    except:
+        bot.send_message(message.chat.id, "❌ Помилка скидання вебхука")
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
@@ -169,7 +197,6 @@ def handle_messages(message):
     user_id = message.from_user.id
     text = message.text.strip()
     
-    # Головне меню
     if text == "Дніпро-M":
         user_selection[user_id] = {'brand': 'Дніпро-M'}
         bot.send_message(
@@ -185,11 +212,7 @@ def handle_messages(message):
             for battery_name, battery_price in model_data["batteries"]:
                 price_text += f"  • {battery_name} — {battery_price} грн\n"
         
-        bot.send_message(
-            chat_id, 
-            price_text, 
-            reply_markup=create_main_keyboard()
-        )
+        bot.send_message(chat_id, price_text, reply_markup=create_main_keyboard())
     
     elif text == "Назад":
         bot.send_message(
@@ -198,53 +221,23 @@ def handle_messages(message):
             reply_markup=create_main_keyboard()
         )
     
-    elif text == "Назад до моделей":
-        bot.send_message(
-            chat_id,
-            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-            reply_markup=create_models_keyboard()
-        )
-    
-    elif text == "Назад до типів АКБ":
-        if user_id in user_selection and 'model' in user_selection[user_id]:
-            model = user_selection[user_id]['model']
-            bot.send_message(
-                chat_id,
-                f"Ремонт акумуляторів\nМодель: {model}\n\nОберіть тип акумулятора:",
-                reply_markup=create_battery_type_keyboard(model)
-            )
-        else:
-            bot.send_message(
-                chat_id,
-                "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-                reply_markup=create_models_keyboard()
-            )
-    
-    # Обробка вибору моделі
     elif text in models_structure:
-        if user_id not in user_selection:
-            user_selection[user_id] = {}
-        user_selection[user_id]['model'] = text
-        
+        user_selection[user_id] = {'model': text}
         bot.send_message(
             chat_id,
             f"Ремонт акумуляторів\nМодель: {text}\nТип: {models_structure[text]['type']}\n\nОберіть тип акумулятора:",
             reply_markup=create_battery_type_keyboard(text)
         )
     
-    # Обробка вибору типу акумулятора (НЕ перекидає на кількість, а повертає в головне меню)
     elif " - " in text and " грн" in text:
-        # Витягуємо назву акумулятора з тексту кнопки
         parts = text.split(" - ")
         battery_name = parts[0].strip()
         battery_price = parts[1].replace(" грн", "").strip()
         
-        # Зберігаємо вибір користувача
         if user_id in user_selection and 'model' in user_selection[user_id]:
             user_selection[user_id]['battery_type'] = battery_name
             user_selection[user_id]['price'] = int(battery_price)
             
-            # Повертаємо до головного меню з повідомленням про вибір
             bot.send_message(
                 chat_id,
                 f"✅ Ви обрали:\n\n"
@@ -255,7 +248,6 @@ def handle_messages(message):
                 reply_markup=create_count_keyboard()
             )
     
-    # Обробка вибору кількості
     elif text.isdigit() and 1 <= int(text) <= 10:
         if user_id in user_selection and 'battery_type' in user_selection[user_id]:
             count = int(text)
@@ -275,16 +267,7 @@ def handle_messages(message):
                 f"Для нового розрахунку оберіть бренд:",
                 reply_markup=create_main_keyboard()
             )
-            # Очищаємо вибір після розрахунку
-            if user_id in user_selection:
-                del user_selection[user_id]
-    
-    else:
-        bot.send_message(
-            chat_id,
-            "Ремонт акумуляторів\n\nОберіть бренд:",
-            reply_markup=create_main_keyboard()
-        )
+            del user_selection[user_id]
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
@@ -313,22 +296,6 @@ def handle_callback(call):
             reply_markup=create_channel_main_keyboard()
         )
     
-    elif call.data == "back_to_main":
-        bot.edit_message_text(
-            "Ремонт акумуляторів\n\nОберіть бренд:",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_main_keyboard()
-        )
-    
-    elif call.data == "back_to_models":
-        bot.edit_message_text(
-            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_models_keyboard()
-        )
-    
     elif call.data.startswith("model_"):
         model_key = call.data.split("_")[1]
         bot.edit_message_text(
@@ -343,7 +310,6 @@ def handle_callback(call):
         model_key = parts[1]
         battery_name = " ".join(parts[2:]).replace("_", " ").replace("JP40,", "JP40")
         
-        # Знаходимо ціну
         price = None
         batteries = models_structure[model_key]["batteries"]
         for name, pr in batteries:
@@ -352,13 +318,12 @@ def handle_callback(call):
                 break
         
         if price:
-            # Повертаємо до головного меню з повідомленням про вибір
             bot.edit_message_text(
                 f"✅ Ви обрали:\n\n"
                 f"🔋 Модель: {model_key}\n"
                 f"⚡ Тип акумулятора: {battery_name}\n"
                 f"💰 Ціна: {price} грн\n\n"
-                f"Для розрахунку вартості напишіть боту в особисті повідомлення /start",
+                f"Для розрахунку вартості напишіть боту /start",
                 chat_id=chat_id,
                 message_id=message_id,
                 reply_markup=create_channel_main_keyboard()
@@ -368,46 +333,45 @@ def handle_callback(call):
 
 # ---------- ПУБЛІКАЦІЯ В КАНАЛ ----------
 def post_to_channel():
-    """Публікує повідомлення в канал"""
     try:
         bot.send_message(
             CHANNEL_ID,
             "Ремонт акумуляторів\n\nОберіть бренд:",
             reply_markup=create_channel_main_keyboard()
         )
-        logger.info(f"✅ Повідомлення опубліковано в {CHANNEL_ID}")
         return True
     except Exception as e:
-        logger.error(f"❌ Помилка публікації: {e}")
+        logger.error(f"Помилка: {e}")
         return False
 
 # ---------- ЗАПУСК БОТА ----------
 def run_telegram_bot():
-    """Основний цикл бота"""
-    logger.info("🚀 ЗАПУСК БОТА")
+    logger.info("🚀 Запуск бота...")
     
-    # Публікуємо в канал
     if post_to_channel():
-        logger.info("✅ Бот запущений успішно")
+        logger.info("✅ Бот запущений")
     else:
         logger.warning("⚠️ Проблема з публікацією")
     
-    # Запускаємо полінг
     logger.info("🔄 Бот очікує повідомлення...")
     
     try:
         bot.polling(none_stop=True, timeout=30)
     except Exception as e:
-        logger.error(f"💥 Критична помилка: {e}")
-        time.sleep(5)
-        run_telegram_bot()  # Рекурсивний перезапуск
+        if "409" in str(e) or "Conflict" in str(e):
+            logger.error("🔌 Конфлікт! Скидаю вебхук...")
+            reset_webhook()
+            time.sleep(5)
+            run_telegram_bot()
+        else:
+            logger.error(f"💥 Помилка: {e}")
+            time.sleep(10)
+            run_telegram_bot()
 
 # ---------- ГОЛОВНИЙ КОД ----------
 if __name__ == "__main__":
-    # Запускаємо Flask
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     logger.info("🌐 Flask сервер запущено")
     
-    # Запускаємо бота
     run_telegram_bot()
