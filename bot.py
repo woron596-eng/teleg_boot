@@ -57,37 +57,37 @@ models_structure = {
     "BP‑220 (2 Ah)": {
         "type": "18650",
         "batteries": [
-            ("Ampace JP30 3000mAh 36А", 200),
-            ("EVE 30P 3000mAh 20A", 180),
-            ("DMEGC 30P 3000mAh 20A", 170),
+            ("Ampace JP30 3000mAh 36А", 1250),
+            ("EVE 30P 3000mAh 20A", 900),
+            ("DMEGC 30P 3000mAh 20A", 900),
         ]
     },
     "BP‑240 (4 Ah)": {
         "type": "18650", 
         "batteries": [
-            ("Ampace JP30 3000mAh 36А", 200),
-            ("EVE 30P 3000mAh 20A", 180),
-            ("DMEGC 30P 3000mAh 20A", 170),
+            ("Ampace JP30 3000mAh 36А", 2000),
+            ("EVE 30P 3000mAh 20A", 1600),
+            ("DMEGC 30P 3000mAh 20A", 1600),
         ]
     },
     "BP‑260 (6 Ah)": {
         "type": "18650",
         "batteries": [
-            ("Ampace JP30 3000mAh 36А", 200),
-            ("EVE 30P 3000mAh 20A", 180),
-            ("DMEGC 30P 3000mAh 20A", 170),
+            ("Ampace JP30 3000mAh 36А", 2900),
+            ("EVE 30P 3000mAh 20A", 2100),
+            ("DMEGC 30P 3000mAh 20A", 2100),
         ]
     },
     "BP‑240N (4 Ah)": {
         "type": "21700",
         "batteries": [
-            ("Ampace JP40 70А", 300),
+            ("Ampace JP40 70А", 1350),
         ]
     },
     "BP‑280N (8 Ah)": {
         "type": "21700",
         "batteries": [
-            ("Ampace JP40 70А", 300),
+            ("Ampace JP40 70А", 2200),
         ]
     }
 }
@@ -366,3 +366,4 @@ if __name__ == "__main__":
     
     # Запускаємо Telegram бота
     run_bot()
+
