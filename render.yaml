@@ -7,7 +7,9 @@ services:
     envVars:
       - key: TELEGRAM_TOKEN
         sync: false
+        value: "8252548275:AAF0qYbEZCoBPEN6gNHx2kkYi9gHoUPNKrA"
       - key: CHANNEL_ID
+        sync: true
         value: "@tester_avto"
     plan: free
     autoDeploy: true
