@@ -71,34 +71,34 @@ calculator_data = {
     "18650": {
         "element_capacity": "3000mAh",
         "elements_per_battery": {
-            "2шт": {"config": "1s2p", "total_capacity": "6000mAh", "voltage": "3.7V"},
-            "3шт": {"config": "1s3p", "total_capacity": "9000mAh", "voltage": "3.7V"},
-            "4шт": {"config": "2s2p", "total_capacity": "6000mAh", "voltage": "7.4V"},
-            "5шт": {"config": "5s1p", "total_capacity": "3000mAh", "voltage": "18.5V"},
-            "6шт": {"config": "2s3p", "total_capacity": "9000mAh", "voltage": "7.4V"},
-            "10шт": {"config": "2s5p", "total_capacity": "15000mAh", "voltage": "7.4V"},
-            "12шт": {"config": "3s4p", "total_capacity": "12000mAh", "voltage": "11.1V"},
-            "15шт": {"config": "3s5p", "total_capacity": "15000mAh", "voltage": "11.1V"},
-            "20шт": {"config": "5s4p", "total_capacity": "12000mAh", "voltage": "18.5V"}
+            "2шт": {"total_capacity": "6000mAh", "repair_price": 100},
+            "3шт": {"total_capacity": "9000mAh", "repair_price": 100},
+            "4шт": {"total_capacity": "6000mAh", "repair_price": 100},
+            "5шт": {"total_capacity": "3000mAh", "repair_price": 100},
+            "6шт": {"total_capacity": "9000mAh", "repair_price": 100},
+            "10шт": {"total_capacity": "15000mAh", "repair_price": 100},
+            "12шт": {"total_capacity": "12000mAh", "repair_price": 100},
+            "15шт": {"total_capacity": "15000mAh", "repair_price": 100},
+            "20шт": {"total_capacity": "12000mAh", "repair_price": 100}
         },
         "battery_options": [
-            ("Ampace JP30 3000mAh 36А", "3000mAh", 2900),
-            ("EVE 30P 3000mAh 20A", "3000mAh", 2100),
-            ("DMEGC 30P 3000mAh 20A", "3000mAh", 2100),
+            ("Ampace JP30 36А", "3000mAh", 2900),
+            ("EVE 30P 20A", "3000mAh", 2100),
+            ("DMEGC 30P 20A", "3000mAh", 2100),
         ]
     },
     "21700": {
         "element_capacity": "4000mAh",
         "elements_per_battery": {
-            "2шт": {"config": "1s2p", "total_capacity": "8000mAh", "voltage": "3.7V"},
-            "3шт": {"config": "1s3p", "total_capacity": "12000mAh", "voltage": "3.7V"},
-            "4шт": {"config": "2s2p", "total_capacity": "8000mAh", "voltage": "7.4V"},
-            "5шт": {"config": "5s1p", "total_capacity": "4000mAh", "voltage": "18.5V"},
-            "6шт": {"config": "2s3p", "total_capacity": "12000mAh", "voltage": "7.4V"},
-            "10шт": {"config": "2s5p", "total_capacity": "20000mAh", "voltage": "7.4V"},
-            "12шт": {"config": "3s4p", "total_capacity": "16000mAh", "voltage": "11.1V"},
-            "15шт": {"config": "3s5p", "total_capacity": "20000mAh", "voltage": "11.1V"},
-            "20шт": {"config": "5s4p", "total_capacity": "16000mAh", "voltage": "18.5V"}
+            "2шт": {"total_capacity": "8000mAh", "repair_price": 100},
+            "3шт": {"total_capacity": "12000mAh", "repair_price": 100},
+            "4шт": {"total_capacity": "8000mAh", "repair_price": 100},
+            "5шт": {"total_capacity": "4000mAh", "repair_price": 100},
+            "6шт": {"total_capacity": "12000mAh", "repair_price": 100},
+            "10шт": {"total_capacity": "20000mAh", "repair_price": 100},
+            "12шт": {"total_capacity": "16000mAh", "repair_price": 100},
+            "15шт": {"total_capacity": "20000mAh", "repair_price": 100},
+            "20шт": {"total_capacity": "16000mAh", "repair_price": 100}
         },
         "battery_options": [
             ("Ampace JP40 70А", "4000mAh", 1350),
@@ -232,12 +232,11 @@ def create_calculator_count_keyboard(format_type):
     keyboard.add("◀️ Назад до вибору формату")
     return keyboard
 
-def create_calculator_battery_keyboard(format_type, count):
+def create_calculator_battery_keyboard(format_type):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     batteries = calculator_data[format_type]["battery_options"]
     for battery_name, battery_capacity, battery_price in batteries:
-        total_price = battery_price * int(count[:-2])  # Прибираємо "шт" та конвертуємо в число
-        keyboard.add(f"{battery_name} - {total_price} грн")
+        keyboard.add(f"{battery_name} - {battery_price} грн за елемент")
     keyboard.add("◀️ Назад до кількості")
     return keyboard
 
@@ -453,27 +452,25 @@ def handle_messages(message):
                     chat_id,
                     f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
                     f"**Формат:** {format_type}\n"
-                    f"**Кількість:** {count}\n"
-                    f"**Конфігурація:** {config_data['config']}\n"
-                    f"**Вихідна напруга:** {config_data['voltage']}\n"
-                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n\n"
-                    f"**Оберіть тип акумулятора:**",
-                    reply_markup=create_calculator_battery_keyboard(format_type, count[:-2]),
+                    f"**Кількість елементів:** {count}\n"
+                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n"
+                    f"**Ціна за ремонт:** {config_data['repair_price']} грн\n\n"
+                    f"**Оберіть тип елемента:**",
+                    reply_markup=create_calculator_battery_keyboard(format_type),
                     parse_mode="Markdown"
                 )
     
-    # Обробка вибору типу акумулятора для калькулятора
-    elif " - " in text and " грн" in text and user_id in user_calculator and user_calculator[user_id].get('step') == 'battery':
+    # Обробка вибору типу елемента для калькулятора
+    elif " - " in text and "грн за елемент" in text and user_id in user_calculator and user_calculator[user_id].get('step') == 'battery':
         parts = text.split(" - ")
         battery_name = parts[0].strip()
-        battery_total_price = int(parts[1].replace(" грн", "").strip())
         
         if user_id in user_calculator and 'format' in user_calculator[user_id] and 'count' in user_calculator[user_id]:
             format_type = user_calculator[user_id]['format']
             count = user_calculator[user_id]['count']
             count_num = int(count[:-2])  # Прибираємо "шт"
             
-            # Знаходимо ціну за один елемент
+            # Знаходимо дані елемента та ремонту
             price_per_element = 0
             battery_capacity = ""
             for name, capacity, price in calculator_data[format_type]["battery_options"]:
@@ -483,19 +480,23 @@ def handle_messages(message):
                     break
             
             config_data = calculator_data[format_type]["elements_per_battery"][count]
+            repair_price = config_data['repair_price']
+            total_elements_price = price_per_element * count_num
+            total_price = total_elements_price + repair_price
             
             # Формуємо фінальне повідомлення
             final_text = (
                 f"🧮 **РЕЗУЛЬТАТ РОЗРАХУНКУ**\n\n"
                 f"**Формат елементів:** {format_type}\n"
                 f"**Кількість елементів:** {count}\n"
-                f"**Конфігурація:** {config_data['config']}\n"
-                f"**Вихідна напруга:** {config_data['voltage']}\n"
+                f"**Тип елемента:** {battery_name}\n"
                 f"**Ємність одного елемента:** {battery_capacity}\n"
                 f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n\n"
-                f"**Тип акумулятора:** {battery_name}\n"
-                f"**Ціна за один елемент:** {price_per_element} грн\n"
-                f"**Загальна вартість елементів:** {battery_total_price} грн\n\n"
+                f"**РОЗРАХУНОК ВАРТОСТІ:**\n"
+                f"• Ціна за один елемент: {price_per_element} грн\n"
+                f"• Вартість елементів: {total_elements_price} грн\n"
+                f"• Ціна за ремонт: {repair_price} грн\n"
+                f"• **ЗАГАЛЬНА ВАРТІСТЬ: {total_price} грн**\n\n"
                 f"Для нового розрахунку оберіть 'Калькулятор' в головному меню."
             )
             
@@ -698,11 +699,10 @@ def handle_callback(call):
                 info_text = (
                     f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
                     f"**Формат:** {format_type}\n"
-                    f"**Кількість:** {count}\n"
-                    f"**Конфігурація:** {config_data['config']}\n"
-                    f"**Вихідна напруга:** {config_data['voltage']}\n"
-                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n\n"
-                    f"Для розрахунку вартості напишіть боту /start та оберіть 'Калькулятор'"
+                    f"**Кількість елементів:** {count}\n"
+                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n"
+                    f"**Ціна за ремонт:** {config_data['repair_price']} грн\n\n"
+                    f"Для вибору елементів та детального розрахунку напишіть боту /start та оберіть 'Калькулятор'"
                 )
                 
                 bot.edit_message_text(
