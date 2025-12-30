@@ -66,42 +66,73 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------- ДАНІ ----------
+# ---------- ДАНІ З ВИХІДНОЮ ЄМНІСТЮ ----------
+# Формат: (назва, ємність (mAh), ціна)
 models_structure = {
+    "BP‑122 12V / 2.0Ah": {
+        "type": "12V блок",
+        "capacity": "3000mAh",
+        "voltage": "12V",
+        "batteries": [
+            ("Ampace JP30 3000mAh 36А", "3000mAh", 850),
+            ("EVE 30P 3000mAh 20A", "3000mAh", 700),
+            ("DMEGC 30P 3000mAh 20A", "3000mAh", 700),
+        ]
+    },
+    "BP‑125 12V / 4.0Ah": {
+        "type": "12V блок", 
+        "capacity": "6000mAh",
+        "voltage": "12V",
+        "batteries": [
+            ("Ampace JP30 3000mAh 36А", "3000mAh", 1500),
+            ("EVE 30P 3000mAh 20A", "3000mAh", 1200),
+            ("DMEGC 30P 3000mAh 20A", "3000mAh", 1200),
+        ]
+    },
     "BP‑220 (2 Ah)": {
         "type": "18650",
+        "capacity": "3000mAh",
+        "voltage": "20V",
         "batteries": [
-            ("Ampace JP30 3000mAh 36А", 1250),
-            ("EVE 30P 3000mAh 20A", 900),
-            ("DMEGC 30P 3000mAh 20A", 900),
+            ("Ampace JP30 3000mAh 36А", "3000mAh", 1250),
+            ("EVE 30P 3000mAh 20A", "3000mAh", 900),
+            ("DMEGC 30P 3000mAh 20A", "3000mAh", 900),
         ]
     },
     "BP‑240 (4 Ah)": {
         "type": "18650", 
+        "capacity": "6000mAh",
+        "voltage": "20V",
         "batteries": [
-            ("Ampace JP30 3000mAh 36А", 2000),
-            ("EVE 30P 3000mAh 20A", 1600),
-            ("DMEGC 30P 3000mAh 20A", 1600),
+            ("Ampace JP30 3000mAh 36А", "3000mAh", 2000),
+            ("EVE 30P 3000mAh 20A", "3000mAh", 1600),
+            ("DMEGC 30P 3000mAh 20A", "3000mAh", 1600),
         ]
     },
     "BP‑260 (6 Ah)": {
         "type": "18650",
+        "capacity": "9000mAh",
+        "voltage": "20V",
         "batteries": [
-            ("Ampace JP30 3000mAh 36А", 2900),
-            ("EVE 30P 3000mAh 20A", 2100),
-            ("DMEGC 30P 3000mAh 20A", 2100),
+            ("Ampace JP30 3000mAh 36А", "3000mAh", 2900),
+            ("EVE 30P 3000mAh 20A", "3000mAh", 2100),
+            ("DMEGC 30P 3000mAh 20A", "3000mAh", 2100),
         ]
     },
     "BP‑240N (4 Ah)": {
         "type": "21700",
+        "capacity": "4000mAh",
+        "voltage": "20V",
         "batteries": [
-            ("Ampace JP40 70А", 1350),
+            ("Ampace JP40 70А", "4000mAh", 1350),
         ]
     },
     "BP‑280N (8 Ah)": {
         "type": "21700",
+        "capacity": "8000mAh",
+        "voltage": "20V",
         "batteries": [
-            ("Ampace JP40 70А", 2200),
+            ("Ampace JP40 70А", "4000mAh", 2200),
         ]
     }
 }
@@ -117,18 +148,21 @@ def create_main_keyboard():
 def create_models_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
     buttons = list(models_structure.keys())
+    
+    # Додаємо кнопки по 2 в ряд
     for i in range(0, len(buttons), 2):
         if i + 1 < len(buttons):
             keyboard.add(buttons[i], buttons[i + 1])
         else:
             keyboard.add(buttons[i])
+    
     keyboard.add("Назад")
     return keyboard
 
 def create_battery_type_keyboard(model_key):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     batteries = models_structure[model_key]["batteries"]
-    for battery_name, battery_price in batteries:
+    for battery_name, battery_capacity, battery_price in batteries:
         keyboard.add(f"{battery_name} - {battery_price} грн")
     keyboard.add("Назад до моделей")
     return keyboard
@@ -154,18 +188,21 @@ def create_channel_models_keyboard():
     buttons = []
     for model in models_structure:
         buttons.append(types.InlineKeyboardButton(model, callback_data=f"model_{model}"))
+    
+    # Додаємо кнопки по 2 в ряд
     for i in range(0, len(buttons), 2):
         if i + 1 < len(buttons):
             keyboard.add(buttons[i], buttons[i + 1])
         else:
             keyboard.add(buttons[i])
+    
     keyboard.add(types.InlineKeyboardButton("Назад", callback_data="back_to_main"))
     return keyboard
 
 def create_channel_battery_keyboard(model_key):
     keyboard = types.InlineKeyboardMarkup(row_width=1)
     batteries = models_structure[model_key]["batteries"]
-    for battery_name, battery_price in batteries:
+    for battery_name, battery_capacity, battery_price in batteries:
         clean_name = battery_name.replace(" ", "_").replace(",", "")
         callback_data = f"battery_{model_key}_{clean_name}"
         button_text = f"{battery_name} - {battery_price} грн"
@@ -181,15 +218,6 @@ def handle_start(message):
         "Ремонт акумуляторів\n\nОберіть бренд:",
         reply_markup=create_main_keyboard()
     )
-
-@bot.message_handler(commands=['resetbot'])
-def handle_reset(message):
-    """Команда для скидання вебхука"""
-    try:
-        response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
-        bot.send_message(message.chat.id, f"✅ Вебхук скинуто: {response.text}")
-    except:
-        bot.send_message(message.chat.id, "❌ Помилка скидання вебхука")
 
 @bot.message_handler(func=lambda message: True)
 def handle_messages(message):
@@ -208,8 +236,11 @@ def handle_messages(message):
     elif text == "Прайс":
         price_text = "📋 ПРАЙС Дніпро-М (ціна за 1 акумулятор):\n\n"
         for model_name, model_data in models_structure.items():
-            price_text += f"\n🔋 {model_name} ({model_data['type']}):\n"
-            for battery_name, battery_price in model_data["batteries"]:
+            price_text += f"\n🔋 {model_name}:\n"
+            price_text += f"  Напруга: {model_data.get('voltage', 'Н/Д')}\n"
+            price_text += f"  Вихідна ємність: {model_data['capacity']}\n"
+            price_text += f"  Тип: {model_data['type']}\n"
+            for battery_name, battery_capacity, battery_price in model_data["batteries"]:
                 price_text += f"  • {battery_name} — {battery_price} грн\n"
         
         bot.send_message(chat_id, price_text, reply_markup=create_main_keyboard())
@@ -223,9 +254,15 @@ def handle_messages(message):
     
     elif text in models_structure:
         user_selection[user_id] = {'model': text}
+        model_data = models_structure[text]
         bot.send_message(
             chat_id,
-            f"Ремонт акумуляторів\nМодель: {text}\nТип: {models_structure[text]['type']}\n\nОберіть тип акумулятора:",
+            f"Ремонт акумуляторів\n"
+            f"🔋 Модель: {text}\n"
+            f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
+            f"📊 Вихідна ємність: {model_data['capacity']}\n"
+            f"🔧 Тип: {model_data['type']}\n\n"
+            f"Оберіть тип акумулятора:",
             reply_markup=create_battery_type_keyboard(text)
         )
     
@@ -235,7 +272,17 @@ def handle_messages(message):
         battery_price = parts[1].replace(" грн", "").strip()
         
         if user_id in user_selection and 'model' in user_selection[user_id]:
+            model_key = user_selection[user_id]['model']
+            
+            # Знаходимо ємність акумулятора
+            battery_capacity = ""
+            for name, capacity, price in models_structure[model_key]["batteries"]:
+                if name == battery_name:
+                    battery_capacity = capacity
+                    break
+            
             user_selection[user_id]['battery_type'] = battery_name
+            user_selection[user_id]['battery_capacity'] = battery_capacity
             user_selection[user_id]['price'] = int(battery_price)
             
             bot.send_message(
@@ -243,6 +290,7 @@ def handle_messages(message):
                 f"✅ Ви обрали:\n\n"
                 f"🔋 Модель: {user_selection[user_id]['model']}\n"
                 f"⚡ Тип акумулятора: {battery_name}\n"
+                f"📊 Вихідна ємність: {battery_capacity}\n"
                 f"💰 Ціна: {battery_price} грн\n\n"
                 f"Тепер оберіть кількість акумуляторів:",
                 reply_markup=create_count_keyboard()
@@ -253,6 +301,7 @@ def handle_messages(message):
             count = int(text)
             model = user_selection[user_id]['model']
             battery_type = user_selection[user_id]['battery_type']
+            battery_capacity = user_selection[user_id]['battery_capacity']
             price_per = user_selection[user_id]['price']
             total = price_per * count
             
@@ -261,6 +310,7 @@ def handle_messages(message):
                 f"🧾 РОЗРАХУНОК ВАРТОСТІ:\n\n"
                 f"🔋 Модель: {model}\n"
                 f"⚡ Тип акумулятора: {battery_type}\n"
+                f"📊 Вихідна ємність: {battery_capacity}\n"
                 f"📦 Кількість: {count} шт.\n"
                 f"💰 Ціна за 1: {price_per} грн\n"
                 f"💵 Загальна вартість: {total} грн\n\n"
@@ -285,8 +335,11 @@ def handle_callback(call):
     elif call.data == "show_price":
         price_text = "📋 ПРАЙС Дніпро-М (ціна за 1 акумулятор):\n\n"
         for model_name, model_data in models_structure.items():
-            price_text += f"🔋 {model_name} ({model_data['type']}):\n"
-            for battery_name, battery_price in model_data["batteries"]:
+            price_text += f"🔋 {model_name}:\n"
+            price_text += f"  Напруга: {model_data.get('voltage', 'Н/Д')}\n"
+            price_text += f"  Вихідна ємність: {model_data['capacity']}\n"
+            price_text += f"  Тип: {model_data['type']}\n"
+            for battery_name, battery_capacity, battery_price in model_data["batteries"]:
                 price_text += f"  • {battery_name} — {battery_price} грн\n"
             price_text += "\n"
         bot.edit_message_text(
@@ -298,8 +351,14 @@ def handle_callback(call):
     
     elif call.data.startswith("model_"):
         model_key = call.data.split("_")[1]
+        model_data = models_structure[model_key]
         bot.edit_message_text(
-            f"Ремонт акумуляторів\nМодель: {model_key}\nТип: {models_structure[model_key]['type']}\n\nОберіть тип акумулятора:",
+            f"Ремонт акумуляторів\n"
+            f"🔋 Модель: {model_key}\n"
+            f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
+            f"📊 Вихідна ємність: {model_data['capacity']}\n"
+            f"🔧 Тип: {model_data['type']}\n\n"
+            f"Оберіть тип акумулятора:",
             chat_id=chat_id,
             message_id=message_id,
             reply_markup=create_channel_battery_keyboard(model_key)
@@ -310,19 +369,22 @@ def handle_callback(call):
         model_key = parts[1]
         battery_name = " ".join(parts[2:]).replace("_", " ").replace("JP40,", "JP40")
         
-        price = None
-        batteries = models_structure[model_key]["batteries"]
-        for name, pr in batteries:
+        # Знаходимо дані акумулятора
+        battery_capacity = ""
+        battery_price = 0
+        for name, capacity, price in models_structure[model_key]["batteries"]:
             if name == battery_name:
-                price = pr
+                battery_capacity = capacity
+                battery_price = price
                 break
         
-        if price:
+        if battery_price:
             bot.edit_message_text(
                 f"✅ Ви обрали:\n\n"
                 f"🔋 Модель: {model_key}\n"
                 f"⚡ Тип акумулятора: {battery_name}\n"
-                f"💰 Ціна: {price} грн\n\n"
+                f"📊 Вихідна ємність: {battery_capacity}\n"
+                f"💰 Ціна: {battery_price} грн\n\n"
                 f"Для розрахунку вартості напишіть боту /start",
                 chat_id=chat_id,
                 message_id=message_id,
