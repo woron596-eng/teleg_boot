@@ -7,6 +7,11 @@ from flask import Flask
 import threading
 
 # ----------------------------
+# ГЛОБАЛЬНІ ЗМІННІ (щоб були доступні всюди)
+TOKEN = None
+CHANNEL_ID = None
+bot = None
+
 # НАЛАШТУВАННЯ ДЛЯ RENDER
 app = Flask(__name__)
 
@@ -18,8 +23,12 @@ def home():
 def health():
     return "OK", 200
 
+@app.route('/ping')
+def ping():
+    return "pong", 200
+
 def run_flask():
-    port = int(os.environ.get('PORT', 10000))
+    port = int(os.environ.get('PORT', 8080))
     app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 # ----------------------------
@@ -30,17 +39,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Отримуємо змінні з середовища
-TOKEN = os.environ.get('TELEGRAM_TOKEN')
-CHANNEL_ID = os.environ.get('CHANNEL_ID', '@tester_avto')
-
-if not TOKEN:
-    logger.error("❌ ПОМИЛКА: TELEGRAM_TOKEN не встановлено!")
-    logger.error("📝 Встановіть змінну середовища TELEGRAM_TOKEN на Render.com")
-    # На Render не виходимо, щоб сервер запустився
-    # Просто повідомляємо в логи
-
-bot = telebot.TeleBot(TOKEN if TOKEN else "dummy_token")
+# ---------- ІНІЦІАЛІЗАЦІЯ ----------
+def init_bot():
+    """Ініціалізує бота зі змінних середовища"""
+    global TOKEN, CHANNEL_ID, bot
+    
+    TOKEN = os.environ.get('TELEGRAM_TOKEN')
+    CHANNEL_ID = os.environ.get('CHANNEL_ID', '@tester_avto')
+    
+    if not TOKEN:
+        logger.error("❌ ПОМИЛКА: TELEGRAM_TOKEN не встановлено!")
+        logger.error("📝 Встановіть змінну середовища TELEGRAM_TOKEN на Render.com")
+        logger.info("⏸️ Бот запускається в режимі очікування...")
+        # Створюємо фейкового бота для тесту
+        bot = telebot.TeleBot("dummy_token")
+        return False
+    
+    bot = telebot.TeleBot(TOKEN)
+    logger.info("✅ Токен отримано успішно")
+    return True
 
 # ---------- ЦІНИ ДЛЯ КОЖНОГО ТИПУ АКУМУЛЯТОРА ----------
 # ДЛЯ 18650 АКУМУЛЯТОРІВ
@@ -182,8 +199,8 @@ def find_battery_price(model_key, battery_name):
 
 # ---------- ПУБЛІКАЦІЯ В КАНАЛ ----------
 def post_to_channel_with_retry(max_retries=3, delay=5):
-    if not TOKEN:
-        logger.error("⏸️ Пропускаємо публікацію: токен не встановлено")
+    if not TOKEN or TOKEN == "dummy_token":
+        logger.warning("⏸️ Пропускаємо публікацію: токен не встановлено або фейковий")
         return False
         
     for attempt in range(max_retries):
@@ -437,16 +454,17 @@ def handle_callback(call):
 # ---------- ЗАПУСК БОТА ----------
 def run_bot():
     """Запускає Telegram бота"""
-    if not TOKEN:
-        logger.warning("⏸️ Telegram токен не встановлено. Бот запускається в режимі очікування...")
-        # Чекаємо, поки токен буде встановлений
-        while not TOKEN:
-            time.sleep(10)
-            # Перезавантажуємо токен
-            TOKEN = os.environ.get('TELEGRAM_TOKEN')
-        logger.info("✅ Токен отримано! Запускаємо бота...")
+    global TOKEN
     
     logger.info("🚀 Запуск Telegram бота...")
+    
+    # Очікуємо токен, якщо його немає
+    while not TOKEN or TOKEN == "dummy_token":
+        logger.info("⏸️ Очікуємо встановлення токена...")
+        time.sleep(5)
+        init_bot()  # Перевіряємо знову
+    
+    logger.info("✅ Токен отримано! Запускаємо бота...")
     
     # Спроба публікації в канал
     post_to_channel_with_retry()
@@ -467,7 +485,11 @@ if __name__ == "__main__":
     print("🤖 БОТ ДЛЯ РЕМОНТУ АКУМУЛЯТОРІВ")
     print("⚙️  Версія для Render.com")
     print("=" * 50)
-    print(f"Токен встановлено: {'✅' if TOKEN else '❌'}")
+    
+    # Ініціалізація бота
+    init_bot()
+    
+    print(f"Токен встановлено: {'✅' if TOKEN and TOKEN != 'dummy_token' else '❌'}")
     print(f"Канал: {CHANNEL_ID}")
     
     # Запускаємо Flask в окремому потоці
