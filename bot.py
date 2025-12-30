@@ -67,7 +67,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ---------- ДАНІ З ВИХІДНОЮ ЄМНІСТЮ ----------
-# Формат: (назва, ємність (mAh), ціна)
 models_structure = {
     "BP‑122 12V / 2.0Ah": {
         "type": "12V блок",
@@ -142,7 +141,7 @@ user_selection = {}
 # ---------- КЛАВІАТУРИ ----------
 def create_main_keyboard():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    keyboard.add("Дніпро-M", "Прайс")
+    keyboard.add("Дніпро-M", "Прайс", "Гарантія", "Відправка та оплата")
     return keyboard
 
 def create_models_keyboard():
@@ -156,7 +155,7 @@ def create_models_keyboard():
         else:
             keyboard.add(buttons[i])
     
-    keyboard.add("Назад")
+    keyboard.add("◀️ Назад")
     return keyboard
 
 def create_battery_type_keyboard(model_key):
@@ -164,7 +163,7 @@ def create_battery_type_keyboard(model_key):
     batteries = models_structure[model_key]["batteries"]
     for battery_name, battery_capacity, battery_price in batteries:
         keyboard.add(f"{battery_name} - {battery_price} грн")
-    keyboard.add("Назад до моделей")
+    keyboard.add("◀️ Назад до моделей")
     return keyboard
 
 def create_count_keyboard():
@@ -172,14 +171,16 @@ def create_count_keyboard():
     numbers = [str(i) for i in range(1, 11)]
     keyboard.add(*numbers[:5])
     keyboard.add(*numbers[5:])
-    keyboard.add("Назад до типів АКБ")
+    keyboard.add("◀️ Назад до типів АКБ")
     return keyboard
 
 def create_channel_main_keyboard():
     keyboard = types.InlineKeyboardMarkup(row_width=2)
     keyboard.add(
         types.InlineKeyboardButton("Дніпро-M", callback_data="brand_dnipro"),
-        types.InlineKeyboardButton("Прайс", callback_data="show_price")
+        types.InlineKeyboardButton("Прайс", callback_data="show_price"),
+        types.InlineKeyboardButton("Гарантія", callback_data="warranty"),
+        types.InlineKeyboardButton("Відправка та оплата", callback_data="shipping_payment")
     )
     return keyboard
 
@@ -196,7 +197,7 @@ def create_channel_models_keyboard():
         else:
             keyboard.add(buttons[i])
     
-    keyboard.add(types.InlineKeyboardButton("Назад", callback_data="back_to_main"))
+    keyboard.add(types.InlineKeyboardButton("◀️ Назад", callback_data="back_to_main"))
     return keyboard
 
 def create_channel_battery_keyboard(model_key):
@@ -207,7 +208,7 @@ def create_channel_battery_keyboard(model_key):
         callback_data = f"battery_{model_key}_{clean_name}"
         button_text = f"{battery_name} - {battery_price} грн"
         keyboard.add(types.InlineKeyboardButton(button_text, callback_data=callback_data))
-    keyboard.add(types.InlineKeyboardButton("Назад", callback_data="back_to_models"))
+    keyboard.add(types.InlineKeyboardButton("◀️ Назад", callback_data="back_to_models"))
     return keyboard
 
 # ---------- ОБРОБНИКИ ----------
@@ -215,7 +216,7 @@ def create_channel_battery_keyboard(model_key):
 def handle_start(message):
     bot.send_message(
         message.chat.id,
-        "Ремонт акумуляторів\n\nОберіть бренд:",
+        "Ремонт акумуляторів\n\nОберіть опцію:",
         reply_markup=create_main_keyboard()
     )
 
@@ -225,6 +226,7 @@ def handle_messages(message):
     user_id = message.from_user.id
     text = message.text.strip()
     
+    # Головне меню
     if text == "Дніпро-M":
         user_selection[user_id] = {'brand': 'Дніпро-M'}
         bot.send_message(
@@ -245,13 +247,62 @@ def handle_messages(message):
         
         bot.send_message(chat_id, price_text, reply_markup=create_main_keyboard())
     
-    elif text == "Назад":
+    elif text == "Гарантія":
+        warranty_text = (
+            "📜 ГАРАНТІЯ:\n\n"
+            "✅ На всі відремонтовані акумулятори надається гарантія:\n"
+            "• 3 місяці на елементи акумулятора\n"
+            "• 6 місяців на пайку та збірку\n"
+            "• Гарантія діє з моменту отримання\n"
+            "• У разі виникнення проблем - безкоштовний ремонт або заміна\n\n"
+            "📞 Контакти для гарантійних питань:\n"
+            "• Телефон: +380 XX XXX XX XX\n"
+            "• Email: example@email.com"
+        )
+        bot.send_message(chat_id, warranty_text, reply_markup=create_main_keyboard())
+    
+    elif text == "Відправка та оплата":
+        shipping_text = (
+            "🚚 ВІДПРАВКА ТА ОПЛАТА:\n\n"
+            "📦 Варіанти відправки:\n"
+            "• Нова Пошта - 1-3 дні\n"
+            "• Доставка по м.Надвірна(Безкоштовна)\n\n"
+            "💳 Оплата на карту перед відправкою:\n"
+            "• Стандартний ремонт - 1-3 дні\n"
+        )
+        bot.send_message(chat_id, shipping_text, reply_markup=create_main_keyboard())
+    
+    # Обробка кнопки "Назад"
+    elif text == "◀️ Назад":
         bot.send_message(
             chat_id,
-            "Ремонт акумуляторів\n\nОберіть бренд:",
+            "Ремонт акумуляторів\n\nОберіть опцію:",
             reply_markup=create_main_keyboard()
         )
     
+    elif text == "◀️ Назад до моделей":
+        bot.send_message(
+            chat_id,
+            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+            reply_markup=create_models_keyboard()
+        )
+    
+    elif text == "◀️ Назад до типів АКБ":
+        if user_id in user_selection and 'model' in user_selection[user_id]:
+            model = user_selection[user_id]['model']
+            bot.send_message(
+                chat_id,
+                f"Ремонт акумуляторів\nМодель: {model}\n\nОберіть тип акумулятора:",
+                reply_markup=create_battery_type_keyboard(model)
+            )
+        else:
+            bot.send_message(
+                chat_id,
+                "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+                reply_markup=create_models_keyboard()
+            )
+    
+    # Обробка вибору моделі
     elif text in models_structure:
         user_selection[user_id] = {'model': text}
         model_data = models_structure[text]
@@ -266,6 +317,7 @@ def handle_messages(message):
             reply_markup=create_battery_type_keyboard(text)
         )
     
+    # Обробка вибору типу акумулятора
     elif " - " in text and " грн" in text:
         parts = text.split(" - ")
         battery_name = parts[0].strip()
@@ -296,6 +348,7 @@ def handle_messages(message):
                 reply_markup=create_count_keyboard()
             )
     
+    # Обробка вибору кількості
     elif text.isdigit() and 1 <= int(text) <= 10:
         if user_id in user_selection and 'battery_type' in user_selection[user_id]:
             count = int(text)
@@ -314,10 +367,17 @@ def handle_messages(message):
                 f"📦 Кількість: {count} шт.\n"
                 f"💰 Ціна за 1: {price_per} грн\n"
                 f"💵 Загальна вартість: {total} грн\n\n"
-                f"Для нового розрахунку оберіть бренд:",
+                f"Для нового розрахунку оберіть опцію:",
                 reply_markup=create_main_keyboard()
             )
             del user_selection[user_id]
+    
+    else:
+        bot.send_message(
+            chat_id,
+            "Ремонт акумуляторів\n\nОберіть опцію:",
+            reply_markup=create_main_keyboard()
+        )
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
@@ -347,6 +407,58 @@ def handle_callback(call):
             chat_id=chat_id,
             message_id=message_id,
             reply_markup=create_channel_main_keyboard()
+        )
+    
+    elif call.data == "warranty":
+        warranty_text = (
+            "📜 ГАРАНТІЯ:\n\n"
+            "❌ Гарантія на бмс ненадається навіть у випадку заміни(Дніпро-М)\n"
+            "✅ На всі відремонтовані акумулятори надається гарантія:\n"
+            "• 6 місяці на елементи акумулятора\n"
+            "• 6 місяців на зварку та збірку\n"
+            "• Гарантія діє з моменту отримання\n"
+            "• У разі виникнення проблем - безкоштовний ремонт"
+        )
+        bot.edit_message_text(
+            warranty_text,
+            chat_id=chat_id,
+            message_id=message_id,
+            reply_markup=create_channel_main_keyboard()
+        )
+    
+    elif call.data == "shipping_payment":
+        shipping_text = (
+            "🚚 ВІДПРАВКА ТА ОПЛАТА:\n\n"
+            "📦 Варіанти відправки:\n"
+            "• Нова Пошта - 1-3 дні\n"
+            "• Укрпошта - 2-5 днів\n"
+            "• Самовивіз з м. Київ\n\n"
+            "💳 Способи оплати:\n"
+            "• Передоплата на карту (50%)\n"
+            "• Повна оплата при отриманні\n"
+            "• Готівка при самовивозі"
+        )
+        bot.edit_message_text(
+            shipping_text,
+            chat_id=chat_id,
+            message_id=message_id,
+            reply_markup=create_channel_main_keyboard()
+        )
+    
+    elif call.data == "back_to_main":
+        bot.edit_message_text(
+            "Ремонт акумуляторів\n\nОберіть опцію:",
+            chat_id=chat_id,
+            message_id=message_id,
+            reply_markup=create_channel_main_keyboard()
+        )
+    
+    elif call.data == "back_to_models":
+        bot.edit_message_text(
+            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+            chat_id=chat_id,
+            message_id=message_id,
+            reply_markup=create_channel_models_keyboard()
         )
     
     elif call.data.startswith("model_"):
@@ -398,7 +510,7 @@ def post_to_channel():
     try:
         bot.send_message(
             CHANNEL_ID,
-            "Ремонт акумуляторів\n\nОберіть бренд:",
+            "Ремонт акумуляторів\n\nОберіть опцію:",
             reply_markup=create_channel_main_keyboard()
         )
         return True
