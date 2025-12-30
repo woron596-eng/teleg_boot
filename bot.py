@@ -20,7 +20,7 @@ def health():
 
 def run_flask():
     port = int(os.environ.get('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
 
 # ----------------------------
 # НАЛАШТУВАННЯ ЛОГУВАННЯ
@@ -30,15 +30,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Отримуємо токен з змінних середовища (безпечніше)
-TOKEN = os.environ.get('TELEGRAM_TOKEN', '8252548275:AAF0qYbEZCoBPEN6gNHx2kkYi9gHoUPNKrA')
+# Отримуємо змінні з середовища
+TOKEN = os.environ.get('TELEGRAM_TOKEN')
 CHANNEL_ID = os.environ.get('CHANNEL_ID', '@tester_avto')
 
-if not TOKEN or TOKEN == 'ваш_токен_тут':
-    logger.error("❌ Токен не встановлено! Встановіть змінну середовища TELEGRAM_TOKEN")
-    raise ValueError("Токен Telegram не знайдено")
+if not TOKEN:
+    logger.error("❌ ПОМИЛКА: TELEGRAM_TOKEN не встановлено!")
+    logger.error("📝 Встановіть змінну середовища TELEGRAM_TOKEN на Render.com")
+    # На Render не виходимо, щоб сервер запустився
+    # Просто повідомляємо в логи
 
-bot = telebot.TeleBot(TOKEN)
+bot = telebot.TeleBot(TOKEN if TOKEN else "dummy_token")
 
 # ---------- ЦІНИ ДЛЯ КОЖНОГО ТИПУ АКУМУЛЯТОРА ----------
 # ДЛЯ 18650 АКУМУЛЯТОРІВ
@@ -179,13 +181,13 @@ def find_battery_price(model_key, battery_name):
     return None
 
 # ---------- ПУБЛІКАЦІЯ В КАНАЛ ----------
-def post_to_channel_with_retry(max_retries=5, delay=5):
+def post_to_channel_with_retry(max_retries=3, delay=5):
+    if not TOKEN:
+        logger.error("⏸️ Пропускаємо публікацію: токен не встановлено")
+        return False
+        
     for attempt in range(max_retries):
         try:
-            # Перевіряємо, чи бот має доступ до каналу
-            bot.get_chat(CHANNEL_ID)
-            
-            # Публікуємо повідомлення
             bot.send_message(
                 CHANNEL_ID,
                 "Ремонт акумуляторів\n\nОберіть бренд:",
@@ -435,6 +437,15 @@ def handle_callback(call):
 # ---------- ЗАПУСК БОТА ----------
 def run_bot():
     """Запускає Telegram бота"""
+    if not TOKEN:
+        logger.warning("⏸️ Telegram токен не встановлено. Бот запускається в режимі очікування...")
+        # Чекаємо, поки токен буде встановлений
+        while not TOKEN:
+            time.sleep(10)
+            # Перезавантажуємо токен
+            TOKEN = os.environ.get('TELEGRAM_TOKEN')
+        logger.info("✅ Токен отримано! Запускаємо бота...")
+    
     logger.info("🚀 Запуск Telegram бота...")
     
     # Спроба публікації в канал
@@ -444,7 +455,7 @@ def run_bot():
     while True:
         try:
             logger.info("🔄 Бот очікує повідомлення...")
-            bot.polling(none_stop=True, timeout=60)
+            bot.polling(none_stop=True, timeout=30, long_polling_timeout=30)
         except Exception as e:
             logger.error(f"Помилка полінга: {e}")
             logger.info("♻️ Перезапуск бота через 10 секунд...")
@@ -456,6 +467,8 @@ if __name__ == "__main__":
     print("🤖 БОТ ДЛЯ РЕМОНТУ АКУМУЛЯТОРІВ")
     print("⚙️  Версія для Render.com")
     print("=" * 50)
+    print(f"Токен встановлено: {'✅' if TOKEN else '❌'}")
+    print(f"Канал: {CHANNEL_ID}")
     
     # Запускаємо Flask в окремому потоці
     flask_thread = threading.Thread(target=run_flask, daemon=True)
