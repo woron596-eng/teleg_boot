@@ -70,38 +70,107 @@ logger = logging.getLogger(__name__)
 calculator_data = {
     "18650": {
         "element_capacity": "3000mAh",
-        "elements_per_battery": {
-            "2шт": {"total_capacity": "6000mAh", "repair_price": 100},
-            "3шт": {"total_capacity": "9000mAh", "repair_price": 100},
-            "4шт": {"total_capacity": "6000mAh", "repair_price": 100},
-            "5шт": {"total_capacity": "3000mAh", "repair_price": 100},
-            "6шт": {"total_capacity": "9000mAh", "repair_price": 100},
-            "10шт": {"total_capacity": "15000mAh", "repair_price": 100},
-            "12шт": {"total_capacity": "12000mAh", "repair_price": 100},
-            "15шт": {"total_capacity": "15000mAh", "repair_price": 100},
-            "20шт": {"total_capacity": "12000mAh", "repair_price": 100}
+        "prices": {
+            # Для кожного типу елемента та кожної кількості - загальна ціна
+            "2шт": {
+                "Ampace JP30 36А": 5900,  # загальна ціна за 2 елементи + ремонт
+                "EVE 30P 20A": 4300,
+                "DMEGC 30P 20A": 4300
+            },
+            "3шт": {
+                "Ampace JP30 36А": 8800,  # загальна ціна за 3 елементи + ремонт
+                "EVE 30P 20A": 6400,
+                "DMEGC 30P 20A": 6400
+            },
+            "4шт": {
+                "Ampace JP30 36А": 11700,
+                "EVE 30P 20A": 8500,
+                "DMEGC 30P 20A": 8500
+            },
+            "5шт": {
+                "Ampace JP30 36А": 14600,
+                "EVE 30P 20A": 10600,
+                "DMEGC 30P 20A": 10600
+            },
+            "6шт": {
+                "Ampace JP30 36А": 17500,
+                "EVE 30P 20A": 12700,
+                "DMEGC 30P 20A": 12700
+            },
+            "10шт": {
+                "Ampace JP30 36А": 29100,
+                "EVE 30P 20A": 21100,
+                "DMEGC 30P 20A": 21100
+            },
+            "12шт": {
+                "Ampace JP30 36А": 34900,
+                "EVE 30P 20A": 25300,
+                "DMEGC 30P 20A": 25300
+            },
+            "15шт": {
+                "Ampace JP30 36А": 43600,
+                "EVE 30P 20A": 31600,
+                "DMEGC 30P 20A": 31600
+            },
+            "20шт": {
+                "Ampace JP30 36А": 58100,
+                "EVE 30P 20A": 42100,
+                "DMEGC 30P 20A": 42100
+            }
         },
-        "battery_options": {
-            "Ampace JP30 36А": {"price": 2900, "capacity": "3000mAh"},
-            "EVE 30P 20A": {"price": 2100, "capacity": "3000mAh"},
-            "DMEGC 30P 20A": {"price": 2100, "capacity": "3000mAh"}
+        "total_capacity": {
+            "2шт": "6000mAh",
+            "3шт": "9000mAh",
+            "4шт": "6000mAh",
+            "5шт": "3000mAh",
+            "6шт": "9000mAh",
+            "10шт": "15000mAh",
+            "12шт": "12000mAh",
+            "15шт": "15000mAh",
+            "20шт": "12000mAh"
         }
     },
     "21700": {
         "element_capacity": "4000mAh",
-        "elements_per_battery": {
-            "2шт": {"total_capacity": "8000mAh", "repair_price": 100},
-            "3шт": {"total_capacity": "12000mAh", "repair_price": 100},
-            "4шт": {"total_capacity": "8000mAh", "repair_price": 100},
-            "5шт": {"total_capacity": "4000mAh", "repair_price": 100},
-            "6шт": {"total_capacity": "12000mAh", "repair_price": 100},
-            "10шт": {"total_capacity": "20000mAh", "repair_price": 100},
-            "12шт": {"total_capacity": "16000mAh", "repair_price": 100},
-            "15шт": {"total_capacity": "20000mAh", "repair_price": 100},
-            "20шт": {"total_capacity": "16000mAh", "repair_price": 100}
+        "prices": {
+            "2шт": {
+                "Ampace JP40 70А": 2800  # загальна ціна за 2 елементи + ремонт
+            },
+            "3шт": {
+                "Ampace JP40 70А": 4150
+            },
+            "4шт": {
+                "Ampace JP40 70А": 5500
+            },
+            "5шт": {
+                "Ampace JP40 70А": 6850
+            },
+            "6шт": {
+                "Ampace JP40 70А": 8200
+            },
+            "10шт": {
+                "Ampace JP40 70А": 13600
+            },
+            "12шт": {
+                "Ampace JP40 70А": 16300
+            },
+            "15шт": {
+                "Ampace JP40 70А": 20350
+            },
+            "20шт": {
+                "Ampace JP40 70А": 27100
+            }
         },
-        "battery_options": {
-            "Ampace JP40 70А": {"price": 1350, "capacity": "4000mAh"}
+        "total_capacity": {
+            "2шт": "8000mAh",
+            "3шт": "12000mAh",
+            "4шт": "8000mAh",
+            "5шт": "4000mAh",
+            "6шт": "12000mAh",
+            "10шт": "20000mAh",
+            "12шт": "16000mAh",
+            "15шт": "20000mAh",
+            "20шт": "16000mAh"
         }
     }
 }
@@ -222,7 +291,7 @@ def create_calculator_format_keyboard():
 
 def create_calculator_count_keyboard(format_type):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
-    counts = list(calculator_data[format_type]["elements_per_battery"].keys())
+    counts = list(calculator_data[format_type]["prices"].keys())
     
     # Розділяємо на рядки по 3 кнопки
     for i in range(0, len(counts), 3):
@@ -235,17 +304,9 @@ def create_calculator_count_keyboard(format_type):
 def create_calculator_battery_keyboard(format_type, count):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
     
-    battery_options = calculator_data[format_type]["battery_options"]
+    prices_for_count = calculator_data[format_type]["prices"][count]
     
-    for battery_name, battery_data in battery_options.items():
-        price_per_element = battery_data["price"]
-        count_num = int(count[:-2])  # Прибираємо "шт"
-        total_elements_price = price_per_element * count_num
-        
-        # Додаємо ціну за ремонт
-        repair_price = calculator_data[format_type]["elements_per_battery"][count]["repair_price"]
-        total_price = total_elements_price + repair_price
-        
+    for battery_name, total_price in prices_for_count.items():
         button_text = f"{battery_name} - {total_price} грн"
         keyboard.add(button_text)
     
@@ -299,7 +360,7 @@ def create_channel_calculator_format_keyboard():
 
 def create_channel_calculator_count_keyboard(format_type):
     keyboard = types.InlineKeyboardMarkup(row_width=3)
-    counts = list(calculator_data[format_type]["elements_per_battery"].keys())
+    counts = list(calculator_data[format_type]["prices"].keys())
     
     buttons = []
     for count in counts:
@@ -454,39 +515,29 @@ def handle_messages(message):
             count = text
             
             # Перевіряємо чи така кількість є в даних
-            if count in calculator_data[format_type]["elements_per_battery"]:
+            if count in calculator_data[format_type]["prices"]:
                 user_calculator[user_id]['count'] = count
                 user_calculator[user_id]['step'] = 'battery'
                 
-                config_data = calculator_data[format_type]["elements_per_battery"][count]
+                total_capacity = calculator_data[format_type]["total_capacity"][count]
+                prices_for_count = calculator_data[format_type]["prices"][count]
                 
                 # Формуємо повідомлення з вибором елементів
                 if format_type == "18650":
                     elements_text = "**Для 18650:**\n"
-                    battery_options = calculator_data[format_type]["battery_options"]
-                    for battery_name, battery_data in battery_options.items():
-                        price_per_element = battery_data["price"]
-                        count_num = int(count[:-2])
-                        total_elements_price = price_per_element * count_num
-                        total_price = total_elements_price + config_data['repair_price']
-                        elements_text += f"• {battery_name} ({price_per_element} грн/шт) - {total_price} грн\n"
+                    for battery_name, total_price in prices_for_count.items():
+                        elements_text += f"• {battery_name} - {total_price} грн\n"
                 else:  # 21700
                     elements_text = "**Для 21700:**\n"
-                    battery_options = calculator_data[format_type]["battery_options"]
-                    for battery_name, battery_data in battery_options.items():
-                        price_per_element = battery_data["price"]
-                        count_num = int(count[:-2])
-                        total_elements_price = price_per_element * count_num
-                        total_price = total_elements_price + config_data['repair_price']
-                        elements_text += f"• {battery_name} ({price_per_element} грн/шт) - {total_price} грн\n"
+                    for battery_name, total_price in prices_for_count.items():
+                        elements_text += f"• {battery_name} - {total_price} грн\n"
                 
                 bot.send_message(
                     chat_id,
                     f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
                     f"**Формат:** {format_type}\n"
                     f"**Кількість елементів:** {count}\n"
-                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n"
-                    f"**Ціна за ремонт:** {config_data['repair_price']} грн\n\n"
+                    f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
                     f"{elements_text}\n"
                     f"**Оберіть тип елемента:**",
                     reply_markup=create_calculator_battery_keyboard(format_type, count),
@@ -505,48 +556,32 @@ def handle_messages(message):
             count = user_calculator[user_id]['count']
             count_num = int(count[:-2])  # Прибираємо "шт"
             
-            # Знаходимо дані елемента
-            battery_data = calculator_data[format_type]["battery_options"].get(battery_name)
-            if battery_data:
-                price_per_element = battery_data["price"]
-                battery_capacity = battery_data["capacity"]
-                
-                config_data = calculator_data[format_type]["elements_per_battery"][count]
-                repair_price = config_data['repair_price']
-                total_elements_price = price_per_element * count_num
-                
-                # Формуємо детальний розрахунок
-                calculation_details = (
-                    f"**ДЕТАЛЬНИЙ РОЗРАХУНОК:**\n"
-                    f"• Кількість елементів: {count_num} шт\n"
-                    f"• Ціна за один елемент: {price_per_element} грн\n"
-                    f"• Вартість елементів: {price_per_element} × {count_num} = {total_elements_price} грн\n"
-                    f"• Ціна за ремонт: {repair_price} грн\n"
-                    f"• Загальна вартість: {total_elements_price} + {repair_price} = {total_price} грн"
-                )
-                
-                # Формуємо фінальне повідомлення
-                final_text = (
-                    f"🧮 **РЕЗУЛЬТАТ РОЗРАХУНКУ**\n\n"
-                    f"**Формат елементів:** {format_type}\n"
-                    f"**Кількість елементів:** {count}\n"
-                    f"**Тип елемента:** {battery_name}\n"
-                    f"**Ємність одного елемента:** {battery_capacity}\n"
-                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n\n"
-                    f"{calculation_details}\n\n"
-                    f"Для нового розрахунку оберіть 'Калькулятор' в головному меню."
-                )
-                
-                bot.send_message(
-                    chat_id,
-                    final_text,
-                    reply_markup=create_main_keyboard(),
-                    parse_mode="Markdown"
-                )
-                
-                # Очищаємо дані калькулятора
-                if user_id in user_calculator:
-                    del user_calculator[user_id]
+            total_capacity = calculator_data[format_type]["total_capacity"][count]
+            element_capacity = calculator_data[format_type]["element_capacity"]
+            
+            # Формуємо фінальне повідомлення
+            final_text = (
+                f"🧮 **РЕЗУЛЬТАТ РОЗРАХУНКУ**\n\n"
+                f"**Формат елементів:** {format_type}\n"
+                f"**Кількість елементів:** {count}\n"
+                f"**Тип елемента:** {battery_name}\n"
+                f"**Ємність одного елемента:** {element_capacity}\n"
+                f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
+                f"**ЗАГАЛЬНА ВАРТІСТЬ: {total_price} грн**\n\n"
+                f"*Ціна вже включає вартість елементів та роботу з ремонту*\n\n"
+                f"Для нового розрахунку оберіть 'Калькулятор' в головному меню."
+            )
+            
+            bot.send_message(
+                chat_id,
+                final_text,
+                reply_markup=create_main_keyboard(),
+                parse_mode="Markdown"
+            )
+            
+            # Очищаємо дані калькулятора
+            if user_id in user_calculator:
+                del user_calculator[user_id]
     
     # Обробка вибору моделі (Дніпро-M)
     elif text in models_structure:
@@ -729,35 +764,25 @@ def handle_callback(call):
             format_type = parts[1]
             count = parts[2]
             
-            if count in calculator_data[format_type]["elements_per_battery"]:
-                config_data = calculator_data[format_type]["elements_per_battery"][count]
+            if count in calculator_data[format_type]["prices"]:
+                total_capacity = calculator_data[format_type]["total_capacity"][count]
+                prices_for_count = calculator_data[format_type]["prices"][count]
                 
                 # Формуємо повідомлення з інформацією
                 if format_type == "18650":
                     elements_text = "**Для 18650:**\n"
-                    battery_options = calculator_data[format_type]["battery_options"]
-                    for battery_name, battery_data in battery_options.items():
-                        price_per_element = battery_data["price"]
-                        count_num = int(count[:-2])
-                        total_elements_price = price_per_element * count_num
-                        total_price = total_elements_price + config_data['repair_price']
-                        elements_text += f"• {battery_name} ({price_per_element} грн/шт) - {total_price} грн\n"
+                    for battery_name, total_price in prices_for_count.items():
+                        elements_text += f"• {battery_name} - {total_price} грн\n"
                 else:  # 21700
                     elements_text = "**Для 21700:**\n"
-                    battery_options = calculator_data[format_type]["battery_options"]
-                    for battery_name, battery_data in battery_options.items():
-                        price_per_element = battery_data["price"]
-                        count_num = int(count[:-2])
-                        total_elements_price = price_per_element * count_num
-                        total_price = total_elements_price + config_data['repair_price']
-                        elements_text += f"• {battery_name} ({price_per_element} грн/шт) - {total_price} грн\n"
+                    for battery_name, total_price in prices_for_count.items():
+                        elements_text += f"• {battery_name} - {total_price} грн\n"
                 
                 info_text = (
                     f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
                     f"**Формат:** {format_type}\n"
                     f"**Кількість елементів:** {count}\n"
-                    f"**Вихідна ємність після перепаковки:** {config_data['total_capacity']}\n"
-                    f"**Ціна за ремонт:** {config_data['repair_price']} грн\n\n"
+                    f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
                     f"{elements_text}\n"
                     f"Для вибору елементів та детального розрахунку напишіть боту /start та оберіть 'Калькулятор'"
                 )
