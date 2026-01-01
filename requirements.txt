@@ -1,4 +1,9 @@
+# Основні залежності
 Flask==2.3.3
-python-telegram-bot==20.3
+python-telegram-bot[job-queue]==20.3
 requests==2.31.0
 waitress==2.1.2
+
+# Додаткові (необов'язково)
+Werkzeug==2.3.7
+gunicorn==20.1.0
