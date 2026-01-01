@@ -3,66 +3,48 @@ from telebot import types
 import time
 import logging
 import os
-from flask import Flask
-import threading
-import requests
+from flask import Flask, request
+import sys
+import warnings
 
 # ==================== КОНФІГУРАЦІЯ ====================
 TOKEN = "8252548275:AAF0qYbEZCoBPEN6gNHx2kkYi9gHoUPNKrA"
 CHANNEL_ID = "@tester_avto"
 
-# АВТОМАТИЧНЕ СКИДАННЯ ВЕБХУКА
-def reset_webhook():
-    """Автоматично скидає вебхук при запуску"""
-    try:
-        url = f"https://api.telegram.org/bot{TOKEN}/deleteWebhook"
-        response = requests.get(url, timeout=5)
-        if response.json().get('ok'):
-            print("✅ Вебхук успішно скинуто!")
-            return True
-        else:
-            print("⚠️ Не вдалося скинути вебхук автоматично")
-            return False
-    except Exception as e:
-        print(f"⚠️ Помилка скидання вебхука: {e}")
-        return False
+# Приховуємо попередження Flask
+warnings.filterwarnings("ignore", message=".*development server.*")
 
-# Скидаємо вебхук перед створенням бота
-reset_webhook()
+# Налаштування для Webhook - ОБОВ'ЯЗКОВО для Render
+WEBHOOK_URL = os.environ.get('RENDER_EXTERNAL_URL', '')
+if not WEBHOOK_URL:
+    print("⚠️ УВАГА: RENDER_EXTERNAL_URL не встановлено!")
+    print("⚠️ Додайте змінну середовища RENDER_EXTERNAL_URL на Render")
+    WEBHOOK_URL = "https://telegram-battery-bot-ga5p.onrender.com"  # Ваша адреса з логів
 
 # Створюємо бота
 bot = telebot.TeleBot(TOKEN)
-print("=" * 50)
+
+print("=" * 60)
 print("🤖 БОТ ДЛЯ РЕМОНТУ АКУМУЛЯТОРІВ")
 print(f"✅ Токен: {TOKEN[:10]}...")
 print(f"✅ Канал: {CHANNEL_ID}")
-print("=" * 50)
-# =====================================================
+print(f"✅ Режим: WEBHOOK")
+print(f"✅ Webhook URL: {WEBHOOK_URL}")
+print("=" * 60)
 
 # Flask для Render
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "🤖 Бот працює! Telegram: @tester_avto"
-
-@app.route('/reset')
-def web_reset():
-    """Сторінка для ручного скидання вебхука"""
-    try:
-        response = requests.get(f"https://api.telegram.org/bot{TOKEN}/deleteWebhook")
-        return f"✅ Вебхук скинуто: {response.text}"
-    except:
-        return "❌ Помилка скидання вебхука"
-
-def run_flask():
-    port = int(os.environ.get('PORT', 8080))
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+# Приховуємо деталі Flask у логах
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
 
 # Логування
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -71,14 +53,13 @@ calculator_data = {
     "18650": {
         "element_capacity": "3000mAh",
         "prices": {
-            # Для кожного типу елемента та кожної кількості - загальна ціна
             "2шт": {
-                "Ampace JP30 36А": 700,  # загальна ціна за 2 елементи + ремонт
+                "Ampace JP30 36А": 700,
                 "EVE 30P 20A": 550,
                 "DMEGC 30P 20A": 550
             },
             "3шт": {
-                "Ampace JP30 36А": 950,  # загальна ціна за 3 елементи + ремонт
+                "Ampace JP30 36А": 850,
                 "EVE 30P 20A": 700,
                 "DMEGC 30P 20A": 700
             },
@@ -134,7 +115,7 @@ calculator_data = {
         "element_capacity": "4000mAh",
         "prices": {
             "2шт": {
-                "Ampace JP40 70А": 700  # загальна ціна за 2 елементи + ремонт
+                "Ampace JP40 70А": 700
             },
             "3шт": {
                 "Ampace JP40 70А": 950
@@ -179,7 +160,7 @@ calculator_data = {
 models_structure = {
     "BP‑122 12V / 2.0Ah": {
         "type": "12V блок",
-        "capacity": "3Ah",
+        "capacity": "3000mAh",
         "voltage": "12V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 850),
@@ -189,7 +170,7 @@ models_structure = {
     },
     "BP‑125 12V / 4.0Ah": {
         "type": "12V блок", 
-        "capacity": "6Ah",
+        "capacity": "6000mAh",
         "voltage": "12V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 1500),
@@ -199,7 +180,7 @@ models_structure = {
     },
     "BP‑220 (2 Ah)": {
         "type": "18650",
-        "capacity": "3Ah",
+        "capacity": "3000mAh",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 1250),
@@ -209,7 +190,7 @@ models_structure = {
     },
     "BP‑240 (4 Ah)": {
         "type": "18650", 
-        "capacity": "6Ah",
+        "capacity": "6000mAh",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 2000),
@@ -219,7 +200,7 @@ models_structure = {
     },
     "BP‑260 (6 Ah)": {
         "type": "18650",
-        "capacity": "9Ah",
+        "capacity": "9000mAh",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 2900),
@@ -229,7 +210,7 @@ models_structure = {
     },
     "BP‑240N (4 Ah)": {
         "type": "21700",
-        "capacity": "4Ah",
+        "capacity": "4000mAh",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP40 70А", "4000mAh", 1350),
@@ -237,7 +218,7 @@ models_structure = {
     },
     "BP‑280N (8 Ah)": {
         "type": "21700",
-        "capacity": "8Ah",
+        "capacity": "8000mAh",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP40 70А", "4000mAh", 2200),
@@ -245,6 +226,7 @@ models_structure = {
     }
 }
 
+# Глобальні змінні для збереження стану
 user_selection = {}
 user_calculator = {}
 
@@ -293,7 +275,6 @@ def create_calculator_count_keyboard(format_type):
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True, row_width=3)
     counts = list(calculator_data[format_type]["prices"].keys())
     
-    # Розділяємо на рядки по 3 кнопки
     for i in range(0, len(counts), 3):
         row = counts[i:i+3]
         keyboard.add(*row)
@@ -380,506 +361,575 @@ def create_channel_calculator_count_keyboard(format_type):
 # ---------- ОБРОБНИКИ ----------
 @bot.message_handler(commands=['start', 'help'])
 def handle_start(message):
-    bot.send_message(
-        message.chat.id,
-        "Ремонт акумуляторів\n\nОберіть опцію:",
-        reply_markup=create_main_keyboard()
-    )
-
-@bot.message_handler(func=lambda message: True)
-def handle_messages(message):
-    chat_id = message.chat.id
-    user_id = message.from_user.id
-    text = message.text.strip()
-    
-    # Головне меню
-    if text == "Дніпро-M":
-        user_selection[user_id] = {'brand': 'Дніпро-M'}
+    try:
         bot.send_message(
-            chat_id,
-            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-            reply_markup=create_models_keyboard()
-        )
-    
-    elif text == "Калькулятор":
-        user_calculator[user_id] = {'step': 'format'}
-        bot.send_message(
-            chat_id,
-            "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-            "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
-            "**Оберіть формат елементів:**",
-            reply_markup=create_calculator_format_keyboard(),
-            parse_mode="Markdown"
-        )
-    
-    elif text == "Гарантія":
-        warranty_text = (
-            "📜 ГАРАНТІЯ:\n\n"
-            "✅ На всі відремонтовані акумулятори надається гарантія:\n"
-            "• 3 місяці на елементи акумулятора\n"
-            "• 6 місяців на пайку та збірку\n"
-            "• Гарантія діє з моменту отримання\n"
-            "• У разі виникнення проблем - безкоштовний ремонт або заміна\n\n"
-            "📞 Контакти для гарантійних питань:\n"
-            "• Телефон: +380 XX XXX XX XX\n"
-            "• Email: example@email.com"
-        )
-        bot.send_message(chat_id, warranty_text, reply_markup=create_main_keyboard())
-    
-    elif text == "Відправка та оплата":
-        shipping_text = (
-            "🚚 ВІДПРАВКА ТА ОПЛАТА:\n\n"
-            "📦 Варіанти відправки:\n"
-            "• Нова Пошта - 1-3 дні\n"
-            "• Доставка по м.Надвірна(Безкоштовна)\n\n"
-            "💳 Оплата на карту перед відправкою:\n"
-            "• Стандартний ремонт - 1-3 дні\n"
-        )
-        bot.send_message(chat_id, shipping_text, reply_markup=create_main_keyboard())
-    
-    # Обробка кнопки "Назад"
-    elif text == "◀️ Назад":
-        bot.send_message(
-            chat_id,
+            message.chat.id,
             "Ремонт акумуляторів\n\nОберіть опцію:",
             reply_markup=create_main_keyboard()
         )
-    
-    elif text == "◀️ Назад до моделей":
-        bot.send_message(
-            chat_id,
-            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-            reply_markup=create_models_keyboard()
-        )
-    
-    elif text == "◀️ Назад до типів АКБ":
-        if user_id in user_selection and 'model' in user_selection[user_id]:
-            model = user_selection[user_id]['model']
-            bot.send_message(
-                chat_id,
-                f"Ремонт акумуляторів\nМодель: {model}\n\nОберіть тип акумулятора:",
-                reply_markup=create_battery_type_keyboard(model)
-            )
-        else:
+    except Exception as e:
+        logger.error(f"Error in handle_start: {e}")
+
+@bot.message_handler(func=lambda message: True)
+def handle_messages(message):
+    try:
+        chat_id = message.chat.id
+        user_id = message.from_user.id
+        text = message.text.strip()
+        
+        # Головне меню
+        if text == "Дніпро-M":
+            user_selection[user_id] = {'brand': 'Дніпро-M'}
             bot.send_message(
                 chat_id,
                 "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
                 reply_markup=create_models_keyboard()
             )
-    
-    elif text == "◀️ Назад до вибору формату":
-        user_calculator[user_id] = {'step': 'format'}
-        bot.send_message(
-            chat_id,
-            "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-            "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
-            "**Оберіть формат елементів:**",
-            reply_markup=create_calculator_format_keyboard(),
-            parse_mode="Markdown"
-        )
-    
-    elif text == "◀️ Назад до кількості":
-        if user_id in user_calculator and 'format' in user_calculator[user_id]:
-            format_type = user_calculator[user_id]['format']
+        
+        elif text == "Калькулятор":
+            user_calculator[user_id] = {'step': 'format'}
             bot.send_message(
                 chat_id,
-                f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-                f"**Формат:** {format_type}\n"
-                f"**Ємність одного елемента:** {calculator_data[format_type]['element_capacity']}\n\n"
-                f"**Оберіть кількість елементів:**",
-                reply_markup=create_calculator_count_keyboard(format_type),
+                "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
+                "**Оберіть формат елементів:**",
+                reply_markup=create_calculator_format_keyboard(),
                 parse_mode="Markdown"
             )
-    
-    # Обробка вибору формату для калькулятора
-    elif text in ["18650", "21700"]:
-        if user_id not in user_calculator:
-            user_calculator[user_id] = {}
-        user_calculator[user_id]['format'] = text
-        user_calculator[user_id]['step'] = 'count'
         
-        bot.send_message(
-            chat_id,
-            f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-            f"**Формат:** {text}\n"
-            f"**Ємність одного елемента:** {calculator_data[text]['element_capacity']}\n\n"
-            f"**Оберіть кількість елементів:**",
-            reply_markup=create_calculator_count_keyboard(text),
-            parse_mode="Markdown"
-        )
-    
-    # Обробка вибору кількості елементів для калькулятора
-    elif text.endswith("шт") and text[:-2].isdigit():
-        if user_id in user_calculator and 'format' in user_calculator[user_id]:
-            format_type = user_calculator[user_id]['format']
-            count = text
-            
-            # Перевіряємо чи така кількість є в даних
-            if count in calculator_data[format_type]["prices"]:
-                user_calculator[user_id]['count'] = count
-                user_calculator[user_id]['step'] = 'battery'
-                
-                total_capacity = calculator_data[format_type]["total_capacity"][count]
-                prices_for_count = calculator_data[format_type]["prices"][count]
-                
-                # Формуємо повідомлення з вибором елементів
-                if format_type == "18650":
-                    elements_text = "**Для 18650:**\n"
-                    for battery_name, total_price in prices_for_count.items():
-                        elements_text += f"• {battery_name} - {total_price} грн\n"
-                else:  # 21700
-                    elements_text = "**Для 21700:**\n"
-                    for battery_name, total_price in prices_for_count.items():
-                        elements_text += f"• {battery_name} - {total_price} грн\n"
-                
+        elif text == "Гарантія":
+            warranty_text = (
+                "📜 ГАРАНТІЯ:\n\n"
+                "✅ На всі відремонтовані акумулятори надається гарантія:\n"
+                "• 3 місяці на елементи акумулятора\n"
+                "• 6 місяців на пайку та збірку\n"
+                "• Гарантія діє з моменту отримання\n"
+                "• У разі виникнення проблем - безкоштовний ремонт або заміна\n\n"
+                "📞 Контакти для гарантійних питань:\n"
+                "• Телефон: +380 XX XXX XX XX\n"
+                "• Email: example@email.com"
+            )
+            bot.send_message(chat_id, warranty_text, reply_markup=create_main_keyboard())
+        
+        elif text == "Відправка та оплата":
+            shipping_text = (
+                "🚚 ВІДПРАВКА ТА ОПЛАТА:\n\n"
+                "📦 Варіанти відправки:\n"
+                "• Нова Пошта - 1-3 дні\n"
+                "• Доставка по м.Надвірна(Безкоштовна)\n\n"
+                "💳 Оплата на карту перед відправкою:\n"
+                "• Стандартний ремонт - 1-3 дні\n"
+            )
+            bot.send_message(chat_id, shipping_text, reply_markup=create_main_keyboard())
+        
+        # Обробка кнопки "Назад"
+        elif text == "◀️ Назад":
+            bot.send_message(
+                chat_id,
+                "Ремонт акумуляторів\n\nОберіть опцію:",
+                reply_markup=create_main_keyboard()
+            )
+        
+        elif text == "◀️ Назад до моделей":
+            bot.send_message(
+                chat_id,
+                "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+                reply_markup=create_models_keyboard()
+            )
+        
+        elif text == "◀️ Назад до типів АКБ":
+            if user_id in user_selection and 'model' in user_selection[user_id]:
+                model = user_selection[user_id]['model']
+                bot.send_message(
+                    chat_id,
+                    f"Ремонт акумуляторів\nМодель: {model}\n\nОберіть тип акумулятора:",
+                    reply_markup=create_battery_type_keyboard(model)
+                )
+            else:
+                bot.send_message(
+                    chat_id,
+                    "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+                    reply_markup=create_models_keyboard()
+                )
+        
+        elif text == "◀️ Назад до вибору формату":
+            user_calculator[user_id] = {'step': 'format'}
+            bot.send_message(
+                chat_id,
+                "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
+                "**Оберіть формат елементів:**",
+                reply_markup=create_calculator_format_keyboard(),
+                parse_mode="Markdown"
+            )
+        
+        elif text == "◀️ Назад до кількості":
+            if user_id in user_calculator and 'format' in user_calculator[user_id]:
+                format_type = user_calculator[user_id]['format']
                 bot.send_message(
                     chat_id,
                     f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
                     f"**Формат:** {format_type}\n"
-                    f"**Кількість елементів:** {count}\n"
-                    f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
-                    f"{elements_text}\n"
-                    f"**Оберіть тип елемента:**",
-                    reply_markup=create_calculator_battery_keyboard(format_type, count),
+                    f"**Ємність одного елемента:** {calculator_data[format_type]['element_capacity']}\n\n"
+                    f"**Оберіть кількість елементів:**",
+                    reply_markup=create_calculator_count_keyboard(format_type),
                     parse_mode="Markdown"
                 )
-    
-    # Обробка вибору типу елемента для калькулятора
-    elif " - " in text and " грн" in text and user_id in user_calculator and user_calculator[user_id].get('step') == 'battery':
-        parts = text.split(" - ")
-        battery_name = parts[0].strip()
-        total_price_str = parts[1].replace(" грн", "").strip()
-        total_price = int(total_price_str)
         
-        if user_id in user_calculator and 'format' in user_calculator[user_id] and 'count' in user_calculator[user_id]:
-            format_type = user_calculator[user_id]['format']
-            count = user_calculator[user_id]['count']
-            count_num = int(count[:-2])  # Прибираємо "шт"
-            
-            total_capacity = calculator_data[format_type]["total_capacity"][count]
-            element_capacity = calculator_data[format_type]["element_capacity"]
-            
-            # Формуємо фінальне повідомлення
-            final_text = (
-                f"🧮 **РЕЗУЛЬТАТ РОЗРАХУНКУ**\n\n"
-                f"**Формат елементів:** {format_type}\n"
-                f"**Кількість елементів:** {count}\n"
-                f"**Тип елемента:** {battery_name}\n"
-                f"**Ємність одного елемента:** {element_capacity}\n"
-                f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
-                f"**ЗАГАЛЬНА ВАРТІСТЬ: {total_price} грн**\n\n"
-                f"*Ціна вже включає вартість елементів та роботу з ремонту*\n\n"
-                f"Для нового розрахунку оберіть 'Калькулятор' в головному меню."
-            )
+        # Обробка вибору формату для калькулятора
+        elif text in ["18650", "21700"]:
+            if user_id not in user_calculator:
+                user_calculator[user_id] = {}
+            user_calculator[user_id]['format'] = text
+            user_calculator[user_id]['step'] = 'count'
             
             bot.send_message(
                 chat_id,
-                final_text,
-                reply_markup=create_main_keyboard(),
+                f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                f"**Формат:** {text}\n"
+                f"**Ємність одного елемента:** {calculator_data[text]['element_capacity']}\n\n"
+                f"**Оберіть кількість елементів:**",
+                reply_markup=create_calculator_count_keyboard(text),
                 parse_mode="Markdown"
             )
-            
-            # Очищаємо дані калькулятора
-            if user_id in user_calculator:
-                del user_calculator[user_id]
-    
-    # Обробка вибору моделі (Дніпро-M)
-    elif text in models_structure:
-        user_selection[user_id] = {'model': text}
-        model_data = models_structure[text]
-        bot.send_message(
-            chat_id,
-            f"Ремонт акумуляторів\n"
-            f"🔋 Модель: {text}\n"
-            f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
-            f"📊 Вихідна ємність: {model_data['capacity']}\n"
-            f"🔧 Тип: {model_data['type']}\n\n"
-            f"Оберіть тип акумулятора:",
-            reply_markup=create_battery_type_keyboard(text)
-        )
-    
-    # Обробка вибору типу акумулятора (Дніпро-M)
-    elif " - " in text and " грн" in text and user_id in user_selection and 'model' in user_selection[user_id]:
-        parts = text.split(" - ")
-        battery_name = parts[0].strip()
-        battery_price = parts[1].replace(" грн", "").strip()
         
-        if user_id in user_selection and 'model' in user_selection[user_id]:
-            model_key = user_selection[user_id]['model']
+        # Обробка вибору кількості елементів для калькулятора
+        elif text.endswith("шт") and text[:-2].isdigit():
+            if user_id in user_calculator and 'format' in user_calculator[user_id]:
+                format_type = user_calculator[user_id]['format']
+                count = text
+                
+                if count in calculator_data[format_type]["prices"]:
+                    user_calculator[user_id]['count'] = count
+                    user_calculator[user_id]['step'] = 'battery'
+                    
+                    total_capacity = calculator_data[format_type]["total_capacity"][count]
+                    prices_for_count = calculator_data[format_type]["prices"][count]
+                    
+                    if format_type == "18650":
+                        elements_text = "**Для 18650:**\n"
+                        for battery_name, total_price in prices_for_count.items():
+                            elements_text += f"• {battery_name} - {total_price} грн\n"
+                    else:
+                        elements_text = "**Для 21700:**\n"
+                        for battery_name, total_price in prices_for_count.items():
+                            elements_text += f"• {battery_name} - {total_price} грн\n"
+                    
+                    bot.send_message(
+                        chat_id,
+                        f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                        f"**Формат:** {format_type}\n"
+                        f"**Кількість елементів:** {count}\n"
+                        f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
+                        f"{elements_text}\n"
+                        f"**Оберіть тип елемента:**",
+                        reply_markup=create_calculator_battery_keyboard(format_type, count),
+                        parse_mode="Markdown"
+                    )
+        
+        # Обробка вибору типу елемента для калькулятора
+        elif " - " in text and " грн" in text and user_id in user_calculator and user_calculator[user_id].get('step') == 'battery':
+            parts = text.split(" - ")
+            battery_name = parts[0].strip()
+            total_price_str = parts[1].replace(" грн", "").strip()
+            total_price = int(total_price_str)
             
-            battery_capacity = ""
-            for name, capacity, price in models_structure[model_key]["batteries"]:
-                if name == battery_name:
-                    battery_capacity = capacity
-                    break
+            if user_id in user_calculator and 'format' in user_calculator[user_id] and 'count' in user_calculator[user_id]:
+                format_type = user_calculator[user_id]['format']
+                count = user_calculator[user_id]['count']
+                
+                total_capacity = calculator_data[format_type]["total_capacity"][count]
+                element_capacity = calculator_data[format_type]["element_capacity"]
+                
+                final_text = (
+                    f"🧮 **РЕЗУЛЬТАТ РОЗРАХУНКУ**\n\n"
+                    f"**Формат елементів:** {format_type}\n"
+                    f"**Кількість елементів:** {count}\n"
+                    f"**Тип елемента:** {battery_name}\n"
+                    f"**Ємність одного елемента:** {element_capacity}\n"
+                    f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
+                    f"**ЗАГАЛЬНА ВАРТІСТЬ: {total_price} грн**\n\n"
+                    f"Для нового розрахунку оберіть 'Калькулятор' в головному меню."
+                )
+                
+                bot.send_message(
+                    chat_id,
+                    final_text,
+                    reply_markup=create_main_keyboard(),
+                    parse_mode="Markdown"
+                )
+                
+                if user_id in user_calculator:
+                    del user_calculator[user_id]
+        
+        # Обробка вибору моделі (Дніпро-M)
+        elif text in models_structure:
+            user_selection[user_id] = {'model': text}
+            model_data = models_structure[text]
+            bot.send_message(
+                chat_id,
+                f"Ремонт акумуляторів\n"
+                f"🔋 Модель: {text}\n"
+                f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
+                f"📊 Вихідна ємність: {model_data['capacity']}\n"
+                f"🔧 Тип: {model_data['type']}\n\n"
+                f"Оберіть тип акумулятора:",
+                reply_markup=create_battery_type_keyboard(text)
+            )
+        
+        # Обробка вибору типу акумулятора (Дніпро-M)
+        elif " - " in text and " грн" in text and user_id in user_selection and 'model' in user_selection[user_id]:
+            parts = text.split(" - ")
+            battery_name = parts[0].strip()
+            battery_price = parts[1].replace(" грн", "").strip()
             
-            user_selection[user_id]['battery_type'] = battery_name
-            user_selection[user_id]['battery_capacity'] = battery_capacity
-            user_selection[user_id]['price'] = int(battery_price)
+            if user_id in user_selection and 'model' in user_selection[user_id]:
+                model_key = user_selection[user_id]['model']
+                
+                battery_capacity = ""
+                for name, capacity, price in models_structure[model_key]["batteries"]:
+                    if name == battery_name:
+                        battery_capacity = capacity
+                        break
+                
+                user_selection[user_id]['battery_type'] = battery_name
+                user_selection[user_id]['battery_capacity'] = battery_capacity
+                user_selection[user_id]['price'] = int(battery_price)
+                
+                bot.send_message(
+                    chat_id,
+                    f"✅ Ви обрали:\n\n"
+                    f"🔋 Модель: {user_selection[user_id]['model']}\n"
+                    f"⚡ Тип акумулятора: {battery_name}\n"
+                    f"📊 Вихідна ємність: {battery_capacity}\n"
+                    f"💰 Ціна: {battery_price} грн\n\n"
+                    f"Тепер оберіть кількість акумуляторів:",
+                    reply_markup=create_count_keyboard()
+                )
+        
+        # Обробка вибору кількості (Дніпро-M)
+        elif text.isdigit() and 1 <= int(text) <= 10 and user_id in user_selection and 'battery_type' in user_selection[user_id]:
+            count = int(text)
+            model = user_selection[user_id]['model']
+            battery_type = user_selection[user_id]['battery_type']
+            battery_capacity = user_selection[user_id]['battery_capacity']
+            price_per = user_selection[user_id]['price']
+            total = price_per * count
             
             bot.send_message(
                 chat_id,
-                f"✅ Ви обрали:\n\n"
-                f"🔋 Модель: {user_selection[user_id]['model']}\n"
-                f"⚡ Тип акумулятора: {battery_name}\n"
+                f"🧾 **РОЗРАХУНОК ВАРТОСТІ**\n\n"
+                f"🔋 Модель: {model}\n"
+                f"⚡ Тип акумулятора: {battery_type}\n"
                 f"📊 Вихідна ємність: {battery_capacity}\n"
-                f"💰 Ціна: {battery_price} грн\n\n"
-                f"Тепер оберіть кількість акумуляторів:",
-                reply_markup=create_count_keyboard()
+                f"📦 Кількість: {count} шт.\n"
+                f"💰 Ціна за 1: {price_per} грн\n"
+                f"💵 Загальна вартість: {total} грн\n\n"
+                f"Для нового розрахунку оберіть опцію:",
+                reply_markup=create_main_keyboard()
+            )
+            if user_id in user_selection:
+                del user_selection[user_id]
+        
+        else:
+            bot.send_message(
+                chat_id,
+                "Ремонт акумуляторів\n\nОберіть опцію:",
+                reply_markup=create_main_keyboard()
             )
     
-    # Обробка вибору кількості (Дніпро-M)
-    elif text.isdigit() and 1 <= int(text) <= 10 and user_id in user_selection and 'battery_type' in user_selection[user_id]:
-        count = int(text)
-        model = user_selection[user_id]['model']
-        battery_type = user_selection[user_id]['battery_type']
-        battery_capacity = user_selection[user_id]['battery_capacity']
-        price_per = user_selection[user_id]['price']
-        total = price_per * count
-        
-        bot.send_message(
-            chat_id,
-            f"🧾 **РОЗРАХУНОК ВАРТОСТІ**\n\n"
-            f"🔋 Модель: {model}\n"
-            f"⚡ Тип акумулятора: {battery_type}\n"
-            f"📊 Вихідна ємність: {battery_capacity}\n"
-            f"📦 Кількість: {count} шт.\n"
-            f"💰 Ціна за 1: {price_per} грн\n"
-            f"💵 Загальна вартість: {total} грн\n\n"
-            f"Для нового розрахунку оберіть опцію:",
-            reply_markup=create_main_keyboard()
-        )
-        del user_selection[user_id]
-    
-    else:
-        bot.send_message(
-            chat_id,
-            "Ремонт акумуляторів\n\nОберіть опцію:",
-            reply_markup=create_main_keyboard()
-        )
+    except Exception as e:
+        logger.error(f"Error handling message: {e}")
 
 @bot.callback_query_handler(func=lambda call: True)
 def handle_callback(call):
-    chat_id = call.message.chat.id
-    message_id = call.message.message_id
-    
-    if call.data == "brand_dnipro":
-        bot.edit_message_text(
-            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_models_keyboard()
-        )
-    
-    elif call.data == "show_calculator":
-        bot.edit_message_text(
-            "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-            "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
-            "**Оберіть формат елементів:**",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_calculator_format_keyboard(),
-            parse_mode="Markdown"
-        )
-    
-    elif call.data == "warranty":
-        warranty_text = (
-            "📜 ГАРАНТІЯ:\n\n"
-            "❌ Гарантія на бмс ненадається навіть у випадку заміни(Дніпро-М)\n"
-            "✅ На всі відремонтовані акумулятори надається гарантія:\n"
-            "• 6 місяці на елементи акумулятора\n"
-            "• 6 місяців на зварку та збірку\n"
-            "• Гарантія діє з моменту отримання\n"
-            "• У разі виникнення проблем - безкоштовний ремонт"
-        )
-        bot.edit_message_text(
-            warranty_text,
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_main_keyboard()
-        )
-    
-    elif call.data == "shipping_payment":
-        shipping_text = (
-            "🚚 ВІДПРАВКА ТА ОПЛАТА:\n\n"
-            "📦 Варіанти відправки:\n"
-            "• Нова Пошта - 1-3 дні\n"
-            "• Доставка по м.Надвірна(Безкоштовна)\n\n"
-            "💳 Оплата на карту перед відправкою:\n"
-            "• Стандартний ремонт - 1-3 дні\n"
-            "• Алреса відправки м.Надвірна відділення нової пошти №1 тел:0980626364 Ящук Роман\n"
-            "• перед відправкою телефонуєте або пишете в Телеграм або Вайбер\n"
-        )
-        bot.edit_message_text(
-            shipping_text,
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_main_keyboard()
-        )
-    
-    elif call.data == "back_to_main":
-        bot.edit_message_text(
-            "Ремонт акумуляторів\n\nОберіть опцію:",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_main_keyboard()
-        )
-    
-    elif call.data == "back_to_models":
-        bot.edit_message_text(
-            "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_models_keyboard()
-        )
-    
-    elif call.data == "calc_back_format":
-        bot.edit_message_text(
-            "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-            "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
-            "**Оберіть формат елементів:**",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_calculator_format_keyboard(),
-            parse_mode="Markdown"
-        )
-    
-    elif call.data.startswith("calc_"):
-        parts = call.data.split("_")
+    try:
+        chat_id = call.message.chat.id
+        message_id = call.message.message_id
         
-        if len(parts) == 2:  # calc_18650 або calc_21700
-            format_type = parts[1]
-            bot.edit_message_text(
-                f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-                f"**Формат:** {format_type}\n"
-                f"**Ємність одного елемента:** {calculator_data[format_type]['element_capacity']}\n\n"
-                f"**Оберіть кількість елементів:**",
-                chat_id=chat_id,
-                message_id=message_id,
-                reply_markup=create_channel_calculator_count_keyboard(format_type),
-                parse_mode="Markdown"
-            )
-        
-        elif len(parts) == 3:  # calc_18650_2шт
-            format_type = parts[1]
-            count = parts[2]
-            
-            if count in calculator_data[format_type]["prices"]:
-                total_capacity = calculator_data[format_type]["total_capacity"][count]
-                prices_for_count = calculator_data[format_type]["prices"][count]
-                
-                # Формуємо повідомлення з інформацією
-                if format_type == "18650":
-                    elements_text = "**Для 18650:**\n"
-                    for battery_name, total_price in prices_for_count.items():
-                        elements_text += f"• {battery_name} - {total_price} грн\n"
-                else:  # 21700
-                    elements_text = "**Для 21700:**\n"
-                    for battery_name, total_price in prices_for_count.items():
-                        elements_text += f"• {battery_name} - {total_price} грн\n"
-                
-                info_text = (
-                    f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
-                    f"**Формат:** {format_type}\n"
-                    f"**Кількість елементів:** {count}\n"
-                    f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
-                    f"{elements_text}\n"
-                    f"Для вибору елементів та детального розрахунку напишіть боту /start та оберіть 'Калькулятор'"
-                )
-                
+        # Додаємо обробку помилки редагування
+        try:
+            if call.data == "brand_dnipro":
                 bot.edit_message_text(
-                    info_text,
+                    "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
                     chat_id=chat_id,
                     message_id=message_id,
-                    reply_markup=create_channel_main_keyboard(),
+                    reply_markup=create_channel_models_keyboard()
+                )
+            
+            elif call.data == "show_calculator":
+                bot.edit_message_text(
+                    "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                    "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
+                    "**Оберіть формат елементів:**",
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_calculator_format_keyboard(),
                     parse_mode="Markdown"
                 )
-    
-    elif call.data.startswith("model_"):
-        model_key = call.data.split("_")[1]
-        model_data = models_structure[model_key]
-        bot.edit_message_text(
-            f"Ремонт акумуляторів\n"
-            f"🔋 Модель: {model_key}\n"
-            f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
-            f"📊 Вихідна ємність: {model_data['capacity']}\n"
-            f"🔧 Тип: {model_data['type']}\n\n"
-            f"Оберіть тип акумулятора:",
-            chat_id=chat_id,
-            message_id=message_id,
-            reply_markup=create_channel_battery_keyboard(model_key)
-        )
-    
-    elif call.data.startswith("battery_"):
-        parts = call.data.split("_")
-        model_key = parts[1]
-        battery_name = " ".join(parts[2:]).replace("_", " ").replace("JP40,", "JP40")
+            
+            elif call.data == "warranty":
+                warranty_text = (
+                    "📜 ГАРАНТІЯ:\n\n"
+                    "❌ Гарантія на бмс ненадається навіть у випадку заміни(Дніпро-М)\n"
+                    "✅ На всі відремонтовані акумулятори надається гарантія:\n"
+                    "• 6 місяці на елементи акумулятора\n"
+                    "• 6 місяців на зварку та збірку\n"
+                    "• Гарантія діє з моменту отримання\n"
+                    "• У разі виникнення проблем - безкоштовний ремонт"
+                )
+                bot.edit_message_text(
+                    warranty_text,
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_main_keyboard()
+                )
+            
+            elif call.data == "shipping_payment":
+                shipping_text = (
+                    "🚚 ВІДПРАВКА ТА ОПЛАТА:\n\n"
+                    "📦 Варіанти відправки:\n"
+                    "• Нова Пошта - 1-3 дні\n"
+                    "• Доставка по м.Надвірна(Безкоштовна)\n\n"
+                    "💳 Оплата на карту перед відправкою:\n"
+                    "• Стандартний ремонт - 1-3 дні\n"
+                    "• Алреса відправки м.Надвірна відділення нової пошти №1 тел:0980626364 Ящук Роман\n"
+                    "• перед відправкою телефонуєте або пишете в Телеграм або Вайбер\n"
+                )
+                bot.edit_message_text(
+                    shipping_text,
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_main_keyboard()
+                )
+            
+            elif call.data == "back_to_main":
+                bot.edit_message_text(
+                    "Ремонт акумуляторів\n\nОберіть опцію:",
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_main_keyboard()
+                )
+            
+            elif call.data == "back_to_models":
+                bot.edit_message_text(
+                    "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_models_keyboard()
+                )
+            
+            elif call.data == "calc_back_format":
+                bot.edit_message_text(
+                    "🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                    "Розберіть акумулятор, порахуйте кількість елементів та визначте їх формат:\n\n"
+                    "**Оберіть формат елементів:**",
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_calculator_format_keyboard(),
+                    parse_mode="Markdown"
+                )
+            
+            elif call.data.startswith("calc_"):
+                parts = call.data.split("_")
+                
+                if len(parts) == 2:
+                    format_type = parts[1]
+                    bot.edit_message_text(
+                        f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                        f"**Формат:** {format_type}\n"
+                        f"**Ємність одного елемента:** {calculator_data[format_type]['element_capacity']}\n\n"
+                        f"**Оберіть кількість елементів:**",
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        reply_markup=create_channel_calculator_count_keyboard(format_type),
+                        parse_mode="Markdown"
+                    )
+                
+                elif len(parts) == 3:
+                    format_type = parts[1]
+                    count = parts[2]
+                    
+                    if count in calculator_data[format_type]["prices"]:
+                        total_capacity = calculator_data[format_type]["total_capacity"][count]
+                        prices_for_count = calculator_data[format_type]["prices"][count]
+                        
+                        if format_type == "18650":
+                            elements_text = "**Для 18650:**\n"
+                            for battery_name, total_price in prices_for_count.items():
+                                elements_text += f"• {battery_name} - {total_price} грн\n"
+                        else:
+                            elements_text = "**Для 21700:**\n"
+                            for battery_name, total_price in prices_for_count.items():
+                                elements_text += f"• {battery_name} - {total_price} грн\n"
+                        
+                        info_text = (
+                            f"🧮 **КАЛЬКУЛЯТОР РОЗРАХУНКУ**\n\n"
+                            f"**Формат:** {format_type}\n"
+                            f"**Кількість елементів:** {count}\n"
+                            f"**Вихідна ємність після перепаковки:** {total_capacity}\n\n"
+                            f"{elements_text}\n"
+                            f"Для вибору елементів та детального розрахунку напишіть боту /start та оберіть 'Калькулятор'"
+                        )
+                        
+                        bot.edit_message_text(
+                            info_text,
+                            chat_id=chat_id,
+                            message_id=message_id,
+                            reply_markup=create_channel_main_keyboard(),
+                            parse_mode="Markdown"
+                        )
+            
+            elif call.data.startswith("model_"):
+                model_key = call.data.split("_")[1]
+                model_data = models_structure[model_key]
+                bot.edit_message_text(
+                    f"Ремонт акумуляторів\n"
+                    f"🔋 Модель: {model_key}\n"
+                    f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
+                    f"📊 Вихідна ємність: {model_data['capacity']}\n"
+                    f"🔧 Тип: {model_data['type']}\n\n"
+                    f"Оберіть тип акумулятора:",
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    reply_markup=create_channel_battery_keyboard(model_key)
+                )
+            
+            elif call.data.startswith("battery_"):
+                parts = call.data.split("_")
+                model_key = parts[1]
+                battery_name = " ".join(parts[2:]).replace("_", " ").replace("JP40,", "JP40")
+                
+                battery_capacity = ""
+                battery_price = 0
+                for name, capacity, price in models_structure[model_key]["batteries"]:
+                    if name == battery_name:
+                        battery_capacity = capacity
+                        battery_price = price
+                        break
+                
+                if battery_price:
+                    bot.edit_message_text(
+                        f"✅ Ви обрали:\n\n"
+                        f"🔋 Модель: {model_key}\n"
+                        f"⚡ Тип акумулятора: {battery_name}\n"
+                        f"📊 Вихідна ємність: {battery_capacity}\n"
+                        f"💰 Ціна: {battery_price} грн\n\n"
+                        f"Для розрахунку вартості напишіть боту /start",
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        reply_markup=create_channel_main_keyboard()
+                    )
         
-        battery_capacity = ""
-        battery_price = 0
-        for name, capacity, price in models_structure[model_key]["batteries"]:
-            if name == battery_name:
-                battery_capacity = capacity
-                battery_price = price
-                break
+        except Exception as edit_error:
+            # Якщо не вдалося відредагувати повідомлення, відправляємо нове
+            logger.warning(f"Не вдалося відредагувати повідомлення: {edit_error}")
+            
+            # Відправляємо нове повідомлення замість редагування
+            if call.data == "brand_dnipro":
+                bot.send_message(
+                    chat_id,
+                    "Ремонт акумуляторів\nБренд: Дніпро-M\n\nОберіть модель АКБ:",
+                    reply_markup=create_channel_models_keyboard()
+                )
+            elif call.data == "back_to_main":
+                bot.send_message(
+                    chat_id,
+                    "Ремонт акумуляторів\n\nОберіть опцію:",
+                    reply_markup=create_channel_main_keyboard()
+                )
+            # Додайте інші випадки за потреби
         
-        if battery_price:
-            bot.edit_message_text(
-                f"✅ Ви обрали:\n\n"
-                f"🔋 Модель: {model_key}\n"
-                f"⚡ Тип акумулятора: {battery_name}\n"
-                f"📊 Вихідна ємність: {battery_capacity}\n"
-                f"💰 Ціна: {battery_price} грн\n\n"
-                f"Для розрахунку вартості напишіть боту /start",
-                chat_id=chat_id,
-                message_id=message_id,
-                reply_markup=create_channel_main_keyboard()
-            )
+        bot.answer_callback_query(call.id)
     
-    bot.answer_callback_query(call.id)
-
-# ---------- ПУБЛІКАЦІЯ В КАНАЛ ----------
-def post_to_channel():
-    try:
-        bot.send_message(
-            CHANNEL_ID,
-            "Ремонт акумуляторів\n\nОберіть опцію:",
-            reply_markup=create_channel_main_keyboard()
-        )
-        return True
     except Exception as e:
-        logger.error(f"Помилка: {e}")
-        return False
+        logger.error(f"Error in callback: {e}")
 
-# ---------- ЗАПУСК БОТА ----------
-def run_telegram_bot():
-    logger.info("🚀 Запуск бота...")
-    
-    if post_to_channel():
-        logger.info("✅ Бот запущений")
-    else:
-        logger.warning("⚠️ Проблема з публікацією")
-    
-    logger.info("🔄 Бот очікує повідомлення...")
-    
+# ---------- FLASK ЕНДПОІНТИ ----------
+@app.route('/')
+def home():
+    return "🤖 Бот працює! Telegram: @tester_avto"
+
+@app.route('/ping')
+def ping():
+    return "pong"
+
+@app.route('/setwebhook')
+def set_webhook():
     try:
-        bot.polling(none_stop=True, timeout=30)
-    except Exception as e:
-        if "409" in str(e) or "Conflict" in str(e):
-            logger.error("🔌 Конфлікт! Скидаю вебхук...")
-            reset_webhook()
-            time.sleep(5)
-            run_telegram_bot()
+        webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
+        bot.remove_webhook()
+        time.sleep(1)
+        result = bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+        if result:
+            return f"✅ Webhook налаштовано: {webhook_url}<br><br>Тепер бот працює через webhook на Render!"
         else:
-            logger.error(f"💥 Помилка: {e}")
-            time.sleep(10)
-            run_telegram_bot()
+            return "❌ Не вдалося налаштувати webhook"
+    except Exception as e:
+        return f"⚠️ Помилка: {str(e)}"
+
+@app.route('/deletewebhook')
+def delete_webhook():
+    try:
+        result = bot.delete_webhook()
+        if result:
+            return "✅ Webhook видалено"
+        else:
+            return "❌ Не вдалося видалити webhook"
+    except Exception as e:
+        return f"⚠️ Помилка: {str(e)}"
+
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    """Endpoint для отримання оновлень від Telegram"""
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    return 'Forbidden', 403
+
+@app.route('/health')
+def health():
+    return {"status": "ok", "timestamp": time.time()}
 
 # ---------- ГОЛОВНИЙ КОД ----------
 if __name__ == "__main__":
-    flask_thread = threading.Thread(target=run_flask, daemon=True)
-    flask_thread.start()
-    logger.info("🌐 Flask сервер запущено")
+    try:
+        port = int(os.environ.get('PORT', 10000))
+        
+        logger.info(f"🚀 Запуск бота на Render")
+        logger.info(f"🌐 Порт: {port}")
+        logger.info(f"🔗 Webhook URL: {WEBHOOK_URL}")
+        
+        # Видаляємо старий webhook
+        try:
+            bot.remove_webhook()
+            time.sleep(1)
+        except:
+            pass
+        
+        # Налаштовуємо новий webhook
+        if WEBHOOK_URL:
+            webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
+            try:
+                bot.set_webhook(url=webhook_url, drop_pending_updates=True)
+                logger.info(f"✅ Webhook налаштовано: {webhook_url}")
+            except Exception as e:
+                logger.error(f"⚠️ Помилка налаштування webhook: {e}")
+        else:
+            logger.error("❌ WEBHOOK_URL не встановлено! Бот не працюватиме.")
+        
+        # Запускаємо Flask
+        logger.info(f"🌐 Запуск Flask сервера на порту {port}")
+        app.run(
+            host='0.0.0.0',
+            port=port,
+            debug=False,
+            threaded=True,
+            use_reloader=False
+        )
     
-    run_telegram_bot()
-
+    except Exception as e:
+        logger.error(f"💥 Критична помилка: {e}")
+        sys.exit(1)
