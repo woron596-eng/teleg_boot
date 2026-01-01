@@ -3,91 +3,64 @@ from telebot import types
 import time
 import logging
 import os
-from flask import Flask
+from flask import Flask, request
 import threading
 import requests
 import sys
+import warnings
 
 # ==================== КОНФІГУРАЦІЯ ====================
 TOKEN = "8252548275:AAF0qYbEZCoBPEN6gNHx2kkYi9gHoUPNKrA"
 CHANNEL_ID = "@tester_avto"
 
-# Налаштування для Webhook (обов'язково для Render)
-WEBHOOK_URL = os.environ.get('WEBHOOK_URL', '')  # Для Render
-USE_WEBHOOK = bool(WEBHOOK_URL)  # Автоматично визначаємо режим
+# Приховуємо попередження Flask
+warnings.filterwarnings("ignore", message=".*development server.*")
 
-# Створюємо бота з обмеженням часу
+# Налаштування для Webhook
+WEBHOOK_URL = os.environ.get('WEBHOOK_URL', '')
+USE_WEBHOOK = bool(WEBHOOK_URL)
+
+# Створюємо бота
 bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=4)
+
 print("=" * 50)
 print("🤖 БОТ ДЛЯ РЕМОНТУ АКУМУЛЯТОРІВ")
 print(f"✅ Токен: {TOKEN[:10]}...")
 print(f"✅ Канал: {CHANNEL_ID}")
 print(f"✅ Режим: {'WEBHOOK' if USE_WEBHOOK else 'POLLING'}")
+if USE_WEBHOOK:
+    print(f"✅ Webhook URL: {WEBHOOK_URL}")
 print("=" * 50)
 
 # Flask для Render
 app = Flask(__name__)
 
+# Приховуємо деталі Flask у логах
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('flask').setLevel(logging.ERROR)
+
 # Логування
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.FileHandler('bot.log')
+        logging.StreamHandler(sys.stdout)
     ]
 )
 logger = logging.getLogger(__name__)
-
-# ---------- WEBHOOK НАЛАШТУВАННЯ ----------
-if USE_WEBHOOK:
-    @app.route(f'/{TOKEN}', methods=['POST'])
-    def webhook():
-        """Endpoint для отримання оновлень від Telegram"""
-        if request.headers.get('content-type') == 'application/json':
-            json_string = request.get_data().decode('utf-8')
-            update = telebot.types.Update.de_json(json_string)
-            bot.process_new_updates([update])
-            return 'OK', 200
-        return 'Forbidden', 403
-
-    @app.route('/setwebhook')
-    def set_webhook():
-        """Встановлення webhook"""
-        try:
-            s = bot.set_webhook(url=f'{WEBHOOK_URL}/{TOKEN}')
-            if s:
-                return "✅ Webhook setup OK"
-            else:
-                return "❌ Webhook setup failed"
-        except Exception as e:
-            return f"⚠️ Error: {str(e)}"
-
-    @app.route('/deletewebhook')
-    def delete_webhook():
-        """Видалення webhook"""
-        try:
-            s = bot.delete_webhook()
-            if s:
-                return "✅ Webhook deleted OK"
-            else:
-                return "❌ Webhook delete failed"
-        except Exception as e:
-            return f"⚠️ Error: {str(e)}"
 
 # ---------- ДАНІ ДЛЯ КАЛЬКУЛЯТОРА ----------
 calculator_data = {
     "18650": {
         "element_capacity": "3000mAh",
         "prices": {
-            # Для кожного типу елемента та кожної кількості - загальна ціна
             "2шт": {
-                "Ampace JP30 36А": 700,  # загальна ціна за 2 елементи + ремонт
+                "Ampace JP30 36А": 700,
                 "EVE 30P 20A": 550,
                 "DMEGC 30P 20A": 550
             },
             "3шт": {
-                "Ampace JP30 36А": 850,  # загальна ціна за 3 елементи + ремонт
+                "Ampace JP30 36А": 850,
                 "EVE 30P 20A": 700,
                 "DMEGC 30P 20A": 700
             },
@@ -143,7 +116,7 @@ calculator_data = {
         "element_capacity": "4000mAh",
         "prices": {
             "2шт": {
-                "Ampace JP40 70А": 700  # загальна ціна за 2 елементи + ремонт
+                "Ampace JP40 70А": 700
             },
             "3шт": {
                 "Ampace JP40 70А": 950
@@ -852,14 +825,52 @@ def handle_callback(call):
     except Exception as e:
         logger.error(f"Error in callback: {e}")
 
+# ---------- FLASK ЕНДПОІНТИ ----------
 @app.route('/')
 def home():
     return "🤖 Бот працює! Telegram: @tester_avto"
 
 @app.route('/ping')
 def ping():
-    """Ендпоінт для перевірки роботи бота"""
     return "pong"
+
+@app.route('/setwebhook')
+def set_webhook():
+    if not USE_WEBHOOK:
+        return "❌ Webhook не використовується"
+    
+    try:
+        webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
+        bot.remove_webhook()
+        time.sleep(1)
+        result = bot.set_webhook(url=webhook_url)
+        if result:
+            return f"✅ Webhook налаштовано: {webhook_url}"
+        else:
+            return "❌ Не вдалося налаштувати webhook"
+    except Exception as e:
+        return f"⚠️ Помилка: {str(e)}"
+
+@app.route('/deletewebhook')
+def delete_webhook():
+    try:
+        result = bot.delete_webhook()
+        if result:
+            return "✅ Webhook видалено"
+        else:
+            return "❌ Не вдалося видалити webhook"
+    except Exception as e:
+        return f"⚠️ Помилка: {str(e)}"
+
+@app.route(f'/{TOKEN}', methods=['POST'])
+def webhook():
+    """Endpoint для отримання оновлень від Telegram"""
+    if request.headers.get('content-type') == 'application/json':
+        json_string = request.get_data().decode('utf-8')
+        update = telebot.types.Update.de_json(json_string)
+        bot.process_new_updates([update])
+        return 'OK', 200
+    return 'Forbidden', 403
 
 # ---------- ПУБЛІКАЦІЯ В КАНАЛ ----------
 def post_to_channel():
@@ -876,20 +887,8 @@ def post_to_channel():
         return False
 
 # ---------- ЗАПУСК БОТА ----------
-def run_telegram_bot():
-    logger.info("🚀 Запуск бота...")
-    
-    # Спробуємо опублікувати пост в канал
-    try:
-        post_to_channel()
-    except:
-        logger.warning("⚠️ Не вдалося опублікувати пост в канал")
-    
-    if USE_WEBHOOK:
-        logger.info("🌐 Режим WEBHOOK активовано")
-        return  # Webhook буде обробляти Flask
-    
-    # Якщо не webhook, запускаємо polling
+def run_polling():
+    """Запуск бота в режимі polling"""
     logger.info("🔄 Запуск бота в режимі POLLING...")
     
     while True:
@@ -913,37 +912,58 @@ def run_telegram_bot():
 # ---------- ГОЛОВНИЙ КОД ----------
 if __name__ == "__main__":
     try:
-        # Для Render потрібно використовувати webhook
         port = int(os.environ.get('PORT', 8080))
         
+        # Спробуємо опублікувати пост в канал
+        try:
+            post_to_channel()
+        except Exception as e:
+            logger.warning(f"⚠️ Не вдалося опублікувати пост в канал: {e}")
+        
         if USE_WEBHOOK:
+            # Режим WEBHOOK для Render
+            logger.info(f"🌐 Режим WEBHOOK активовано")
             logger.info(f"🌐 Запуск Flask на порту {port}")
+            
             # Налаштовуємо webhook
             try:
                 webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
                 bot.remove_webhook()
-                time.sleep(1)
-                bot.set_webhook(url=webhook_url)
+                time.sleep(2)
+                bot.set_webhook(url=webhook_url, drop_pending_updates=True)
                 logger.info(f"✅ Webhook налаштовано: {webhook_url}")
             except Exception as e:
                 logger.error(f"⚠️ Помилка налаштування webhook: {e}")
             
             # Запускаємо Flask
-            app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
-        
-        else:
-            logger.info("🔄 Запуск в режимі POLLING (для локального тестування)")
-            flask_thread = threading.Thread(target=lambda: app.run(
+            app.run(
                 host='0.0.0.0', 
                 port=port, 
                 debug=False, 
-                use_reloader=False,
-                threaded=True
-            ), daemon=True)
+                threaded=True,
+                use_reloader=False
+            )
+        
+        else:
+            # Режим POLLING для локального тестування
+            logger.info("🔄 Запуск в режимі POLLING (для локального тестування)")
+            
+            # Запускаємо Flask у фоні для /ping ендпоінта
+            flask_thread = threading.Thread(
+                target=lambda: app.run(
+                    host='0.0.0.0', 
+                    port=port, 
+                    debug=False, 
+                    use_reloader=False,
+                    threaded=True
+                ),
+                daemon=True
+            )
             flask_thread.start()
             logger.info(f"🌐 Flask сервер запущено на порті {port}")
             
-            run_telegram_bot()
+            # Запускаємо бота
+            run_polling()
     
     except Exception as e:
         logger.error(f"💥 Критична помилка: {e}")
