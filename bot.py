@@ -16,20 +16,22 @@ CHANNEL_ID = "@tester_avto"
 # Приховуємо попередження Flask
 warnings.filterwarnings("ignore", message=".*development server.*")
 
-# Налаштування для Webhook
-WEBHOOK_URL = os.environ.get('WEBHOOK_URL', '')
-USE_WEBHOOK = bool(WEBHOOK_URL)
+# Налаштування для Webhook - ОБОВ'ЯЗКОВО для Render
+WEBHOOK_URL = os.environ.get('RENDER_EXTERNAL_URL', os.environ.get('WEBHOOK_URL', ''))
+USE_WEBHOOK = True  # НА РЕНДЕРІ ЗАВЖДИ ВИКОРИСТОВУЄМО WEBHOOK
 
 # Створюємо бота
-bot = telebot.TeleBot(TOKEN, threaded=True, num_threads=4)
+bot = telebot.TeleBot(TOKEN)
 
 print("=" * 50)
 print("🤖 БОТ ДЛЯ РЕМОНТУ АКУМУЛЯТОРІВ")
 print(f"✅ Токен: {TOKEN[:10]}...")
 print(f"✅ Канал: {CHANNEL_ID}")
-print(f"✅ Режим: {'WEBHOOK' if USE_WEBHOOK else 'POLLING'}")
-if USE_WEBHOOK:
+print(f"✅ Режим: WEBHOOK (обов'язково для Render)")
+if WEBHOOK_URL:
     print(f"✅ Webhook URL: {WEBHOOK_URL}")
+else:
+    print("⚠️ Увага: WEBHOOK_URL не встановлено!")
 print("=" * 50)
 
 # Flask для Render
@@ -37,7 +39,6 @@ app = Flask(__name__)
 
 # Приховуємо деталі Flask у логах
 logging.getLogger('werkzeug').setLevel(logging.ERROR)
-logging.getLogger('flask').setLevel(logging.ERROR)
 
 # Логування
 logging.basicConfig(
@@ -836,14 +837,14 @@ def ping():
 
 @app.route('/setwebhook')
 def set_webhook():
-    if not USE_WEBHOOK:
-        return "❌ Webhook не використовується"
+    if not WEBHOOK_URL:
+        return "❌ WEBHOOK_URL не встановлено"
     
     try:
         webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
         bot.remove_webhook()
         time.sleep(1)
-        result = bot.set_webhook(url=webhook_url)
+        result = bot.set_webhook(url=webhook_url, drop_pending_updates=True)
         if result:
             return f"✅ Webhook налаштовано: {webhook_url}"
         else:
@@ -872,6 +873,10 @@ def webhook():
         return 'OK', 200
     return 'Forbidden', 403
 
+@app.route('/health')
+def health():
+    return {"status": "ok", "timestamp": time.time()}
+
 # ---------- ПУБЛІКАЦІЯ В КАНАЛ ----------
 def post_to_channel():
     try:
@@ -886,84 +891,42 @@ def post_to_channel():
         logger.error(f"Помилка публікації в канал: {e}")
         return False
 
-# ---------- ЗАПУСК БОТА ----------
-def run_polling():
-    """Запуск бота в режимі polling"""
-    logger.info("🔄 Запуск бота в режимі POLLING...")
-    
-    while True:
-        try:
-            logger.info("🔄 Бот очікує повідомлення...")
-            bot.polling(none_stop=True, timeout=30, long_polling_timeout=30)
-        
-        except Exception as e:
-            logger.error(f"💥 Помилка polling: {e}")
-            if "409" in str(e) or "Conflict" in str(e):
-                logger.error("🔌 Конфлікт! Скидаю вебхук...")
-                try:
-                    bot.delete_webhook()
-                    time.sleep(5)
-                except:
-                    pass
-            
-            logger.info("♻️ Перезапуск через 10 секунд...")
-            time.sleep(10)
-
 # ---------- ГОЛОВНИЙ КОД ----------
 if __name__ == "__main__":
     try:
-        port = int(os.environ.get('PORT', 8080))
+        port = int(os.environ.get('PORT', 10000))
         
-        # Спробуємо опублікувати пост в канал
+        logger.info(f"🚀 Запуск бота на Render")
+        logger.info(f"🌐 Порт: {port}")
+        logger.info(f"🔗 Webhook URL: {WEBHOOK_URL}")
+        
+        # Видаляємо старий webhook
         try:
-            post_to_channel()
-        except Exception as e:
-            logger.warning(f"⚠️ Не вдалося опублікувати пост в канал: {e}")
+            bot.remove_webhook()
+            time.sleep(1)
+        except:
+            pass
         
-        if USE_WEBHOOK:
-            # Режим WEBHOOK для Render
-            logger.info(f"🌐 Режим WEBHOOK активовано")
-            logger.info(f"🌐 Запуск Flask на порту {port}")
-            
-            # Налаштовуємо webhook
+        # Налаштовуємо новий webhook
+        if WEBHOOK_URL:
+            webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
             try:
-                webhook_url = f"{WEBHOOK_URL}/{TOKEN}"
-                bot.remove_webhook()
-                time.sleep(2)
                 bot.set_webhook(url=webhook_url, drop_pending_updates=True)
                 logger.info(f"✅ Webhook налаштовано: {webhook_url}")
             except Exception as e:
                 logger.error(f"⚠️ Помилка налаштування webhook: {e}")
-            
-            # Запускаємо Flask
-            app.run(
-                host='0.0.0.0', 
-                port=port, 
-                debug=False, 
-                threaded=True,
-                use_reloader=False
-            )
-        
         else:
-            # Режим POLLING для локального тестування
-            logger.info("🔄 Запуск в режимі POLLING (для локального тестування)")
-            
-            # Запускаємо Flask у фоні для /ping ендпоінта
-            flask_thread = threading.Thread(
-                target=lambda: app.run(
-                    host='0.0.0.0', 
-                    port=port, 
-                    debug=False, 
-                    use_reloader=False,
-                    threaded=True
-                ),
-                daemon=True
-            )
-            flask_thread.start()
-            logger.info(f"🌐 Flask сервер запущено на порті {port}")
-            
-            # Запускаємо бота
-            run_polling()
+            logger.warning("⚠️ WEBHOOK_URL не встановлено! Бот може не працювати правильно.")
+        
+        # Запускаємо Flask
+        logger.info(f"🌐 Запуск Flask сервера на порту {port}")
+        app.run(
+            host='0.0.0.0',
+            port=port,
+            debug=False,
+            threaded=True,
+            use_reloader=False
+        )
     
     except Exception as e:
         logger.error(f"💥 Критична помилка: {e}")
