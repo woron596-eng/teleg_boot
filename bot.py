@@ -162,7 +162,7 @@ calculator_data = {
 models_structure = {
     "BP‑122 12V / 2.0Ah": {
         "type": "12V блок",
-        "capacity": "3000mAh",
+        "total_capacity": "3Ah",
         "voltage": "12V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 850),
@@ -172,7 +172,7 @@ models_structure = {
     },
     "BP‑125 12V / 4.0Ah": {
         "type": "12V блок", 
-        "capacity": "6000mAh",
+        "total_capacity": "6Ah",
         "voltage": "12V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 1500),
@@ -182,7 +182,7 @@ models_structure = {
     },
     "BP‑220 (2 Ah)": {
         "type": "18650",
-        "capacity": "3000mAh",
+        "total_capacity": "3Ah",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 1250),
@@ -192,7 +192,7 @@ models_structure = {
     },
     "BP‑240 (4 Ah)": {
         "type": "18650", 
-        "capacity": "6000mAh",
+        "total_capacity": "6Ah",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 2000),
@@ -202,7 +202,7 @@ models_structure = {
     },
     "BP‑260 (6 Ah)": {
         "type": "18650",
-        "capacity": "9000mAh",
+        "total_capacity": "9Ah",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP30 3000mAh 36А", "3000mAh", 2900),
@@ -212,7 +212,7 @@ models_structure = {
     },
     "BP‑240N (4 Ah)": {
         "type": "21700",
-        "capacity": "4000mAh",
+        "total_capacity": "4Ah",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP40 70А", "4000mAh", 1350),
@@ -220,7 +220,7 @@ models_structure = {
     },
     "BP‑280N (8 Ah)": {
         "type": "21700",
-        "capacity": "8000mAh",
+        "total_capacity": "8Ah",
         "voltage": "20V",
         "batteries": [
             ("Ampace JP40 70А", "4000mAh", 2200),
@@ -573,7 +573,7 @@ def handle_messages(message):
                 f"Ремонт акумуляторів\n"
                 f"🔋 Модель: {text}\n"
                 f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
-                f"📊 Вихідна ємність: {model_data['capacity']}\n"
+                f"📊 Вихідна ємність: {model_data['total_capacity']}\n"
                 f"🔧 Тип: {model_data['type']}\n\n"
                 f"Оберіть тип акумулятора:",
                 reply_markup=create_battery_type_keyboard(text)
@@ -588,22 +588,27 @@ def handle_messages(message):
             if user_id in user_selection and 'model' in user_selection[user_id]:
                 model_key = user_selection[user_id]['model']
                 
-                battery_capacity = ""
+                # Знаходимо ємність елемента (для внутрішнього використання)
+                element_capacity = ""
                 for name, capacity, price in models_structure[model_key]["batteries"]:
                     if name == battery_name:
-                        battery_capacity = capacity
+                        element_capacity = capacity
                         break
                 
+                # Отримуємо ЗАГАЛЬНУ ємність моделі з models_structure
+                model_total_capacity = models_structure[model_key]["total_capacity"]
+                
                 user_selection[user_id]['battery_type'] = battery_name
-                user_selection[user_id]['battery_capacity'] = battery_capacity
+                user_selection[user_id]['element_capacity'] = element_capacity  # Ємність одного елемента
+                user_selection[user_id]['model_capacity'] = model_total_capacity  # Загальна ємність моделі
                 user_selection[user_id]['price'] = int(battery_price)
                 
                 bot.send_message(
                     chat_id,
                     f"✅ Ви обрали:\n\n"
-                    f"🔋 Модель: {user_selection[user_id]['model']}\n"
+                    f"🔋 Модель: {model_key}\n"
                     f"⚡ Тип акумулятора: {battery_name}\n"
-                    f"📊 Вихідна ємність: {battery_capacity}\n"
+                    f"📊 Вихідна ємність: {model_total_capacity}\n"
                     f"💰 Ціна: {battery_price} грн\n\n"
                     f"Тепер оберіть кількість акумуляторів:",
                     reply_markup=create_count_keyboard()
@@ -614,7 +619,7 @@ def handle_messages(message):
             count = int(text)
             model = user_selection[user_id]['model']
             battery_type = user_selection[user_id]['battery_type']
-            battery_capacity = user_selection[user_id]['battery_capacity']
+            battery_capacity = user_selection[user_id]['model_capacity']  # Використовуємо model_capacity
             price_per = user_selection[user_id]['price']
             total = price_per * count
             
@@ -787,7 +792,7 @@ def handle_callback(call):
                 f"Ремонт акумуляторів\n"
                 f"🔋 Модель: {model_key}\n"
                 f"⚡ Напруга: {model_data.get('voltage', 'Н/Д')}\n"
-                f"📊 Вихідна ємність: {model_data['capacity']}\n"
+                f"📊 Вихідна ємність: {model_data['total_capacity']}\n"
                 f"🔧 Тип: {model_data['type']}\n\n"
                 f"Оберіть тип акумулятора:",
                 chat_id=chat_id,
@@ -813,7 +818,7 @@ def handle_callback(call):
                     f"✅ Ви обрали:\n\n"
                     f"🔋 Модель: {model_key}\n"
                     f"⚡ Тип акумулятора: {battery_name}\n"
-                    f"📊 Вихідна ємність: {battery_capacity}\n"
+                    f"📊 Вихідна ємність: {models_structure[model_key]['total_capacity']}\n"
                     f"💰 Ціна: {battery_price} грн\n\n"
                     f"Для розрахунку вартості напишіть боту /start",
                     chat_id=chat_id,
